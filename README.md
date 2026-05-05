@@ -98,7 +98,7 @@ Built from the ground up for **fantasy roleplay immersion**. Every system, perso
 * **Zone & Subzone Awareness in Prompts**: Zone flavor and subzone lore are now injected into quest, discovery, idle, and event prompts. The player's subzone is tracked from the moment bots join the group.
 * **Focused Memory Callbacks**: When bots recall shared memories, the references are clear and recognizable — not vague allusions.
 * **Message Length Controls**: Stricter length limits prevent wall-of-text messages.
-* **Database Migration**: Run `data/sql/db-characters/updates/20260320_bot_memory_system.sql` if upgrading from a previous version.
+* **Database Migration**: Run `data/sql/characters/updates/20260320_bot_memory_system.sql` if upgrading from a previous version.
 
 ---
 
@@ -245,7 +245,7 @@ Populates talent and spell lookup tables that give the LLM richer context about 
 
 ```bash
 docker exec -i ac-database mysql -uroot -ppassword acore_world < \
-  modules/mod-llm-chatter/data/sql/db-world/base/llm_chatter_talent_dbc.sql
+  modules/mod-llm-chatter/data/sql/world/base/llm_chatter_talent_dbc.sql
 ```
 
 **4. Start**
@@ -276,7 +276,7 @@ Populates talent and spell lookup tables that give the LLM richer context about 
 
 ```bash
 mysql -uroot -ppassword acore_world < \
-  data/sql/db-world/base/llm_chatter_talent_dbc.sql
+  data/sql/world/base/llm_chatter_talent_dbc.sql
 ```
 
 **5. Start worldserver**,  database tables are created automatically.
@@ -385,8 +385,11 @@ Make sure WoW is in the foreground (the agent only captures when WoW is the acti
 
 ## Upgrading
 
-**Fresh installs** create all tables automatically on first
-worldserver startup (from `data/sql/characters/base/`).
+> **First-time installing the module? Skip this section.**
+> The base schema in `data/sql/characters/base/` already contains
+> everything every migration adds. Fresh installs create all
+> tables automatically on first worldserver startup — you do
+> **not** need to run any of the SQL files below.
 
 **Existing installs** must apply migration scripts manually
 when updating to a newer version. Migrations live in
@@ -404,6 +407,15 @@ docker exec -i ac-database mysql -uroot -ppassword acore_characters < \
   modules/mod-llm-chatter/data/sql/characters/updates/20260329_screenshot_event_type.sql
 
 docker exec -i ac-database mysql -uroot -ppassword acore_characters < \
+  modules/mod-llm-chatter/data/sql/characters/updates/20260403_proximity_chatter.sql
+
+docker exec -i ac-database mysql -uroot -ppassword acore_characters < \
+  modules/mod-llm-chatter/data/sql/characters/updates/20260405_proximity_player_say.sql
+
+docker exec -i ac-database mysql -uroot -ppassword acore_characters < \
+  modules/mod-llm-chatter/data/sql/characters/updates/20260406_chatter_addon_identity_tone.sql
+
+docker exec -i ac-database mysql -uroot -ppassword acore_characters < \
   modules/mod-llm-chatter/data/sql/characters/updates/20260416_bot_backstory.sql
 
 # Non-Docker
@@ -415,6 +427,15 @@ mysql -uroot -ppassword acore_characters < \
 
 mysql -uroot -ppassword acore_characters < \
   data/sql/characters/updates/20260329_screenshot_event_type.sql
+
+mysql -uroot -ppassword acore_characters < \
+  data/sql/characters/updates/20260403_proximity_chatter.sql
+
+mysql -uroot -ppassword acore_characters < \
+  data/sql/characters/updates/20260405_proximity_player_say.sql
+
+mysql -uroot -ppassword acore_characters < \
+  data/sql/characters/updates/20260406_chatter_addon_identity_tone.sql
 
 mysql -uroot -ppassword acore_characters < \
   data/sql/characters/updates/20260416_bot_backstory.sql
