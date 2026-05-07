@@ -438,13 +438,16 @@ def get_bound_player_group(
     if not row:
         return None
 
-    # Pick a random bot from the group as speaker
+    # Pick a random current bot from the group as speaker.
     cursor = db.cursor(dictionary=True)
     try:
         cursor.execute("""
-            SELECT bot_guid, bot_name
-            FROM llm_group_bot_traits
-            WHERE group_id = %s
+            SELECT t.bot_guid, t.bot_name
+            FROM llm_group_bot_traits t
+            JOIN group_member bot_gm
+                ON bot_gm.guid = t.group_id
+                AND bot_gm.memberGuid = t.bot_guid
+            WHERE t.group_id = %s
             ORDER BY RAND()
             LIMIT 1
         """, (row['group_id'],))
@@ -469,6 +472,9 @@ def get_active_group_fallback(db) -> 'dict | None':
             SELECT t.group_id, t.bot_guid, t.bot_name,
                    c.zone, c.map
             FROM llm_group_bot_traits t
+            JOIN group_member bot_gm
+                ON bot_gm.guid = t.group_id
+                AND bot_gm.memberGuid = t.bot_guid
             JOIN group_member gm
                 ON gm.guid = t.group_id
             JOIN characters c
