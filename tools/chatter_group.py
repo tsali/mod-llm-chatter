@@ -2618,18 +2618,21 @@ def _maybe_comment_on_composition(
 
 def get_recent_weather(db, zone_id):
     """Get the most recent weather for a zone.
-    Uses the ambient chatter queue (C++ writes real-time
-    weather from its in-memory map) as the primary source.
+    Uses recent ambient chatter requests as an opportunistic
+    bridge from C++ live weather context into Python-only
+    group prompts.
     Returns weather type string or None.
     """
     cursor = db.cursor(dictionary=True)
-    # Primary: get weather from ambient chatter queue
-    # (C++ writes accurate real-time weather here)
+
+    # Avoid asserting weather for group prompts. If no
+    # recent non-empty context exists, omit the weather line.
     cursor.execute("""
         SELECT weather
         FROM llm_chatter_queue
         WHERE zone_id = %s
-          AND weather != 'clear'
+          AND weather IS NOT NULL
+          AND weather != ''
           AND TIMESTAMPDIFF(
               MINUTE, created_at, NOW()
           ) < 30

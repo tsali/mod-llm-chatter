@@ -260,7 +260,7 @@ def process_statement(
     # Select message type
     zone_id = request.get('zone_id', 0)
     area_id = request.get('area_id', zone_id)
-    current_weather = request.get('weather', 'clear')
+    current_weather = request.get('weather') or None
     mode = get_chatter_mode(config)
 
     # Zone metadata for request logging
@@ -554,7 +554,7 @@ def process_conversation(
 
     zone_id = request.get('zone_id', 0)
     area_id = request.get('area_id', zone_id)
-    current_weather = request.get('weather', 'clear')
+    current_weather = request.get('weather') or None
     mode = get_chatter_mode(config)
 
     # Zone metadata for request logging

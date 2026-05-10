@@ -3,6 +3,7 @@
  */
 
 #include "LLMChatterConfig.h"
+#include "LLMChatterAmbient.h"
 #include "LLMChatterBG.h"
 #include "LLMChatterGroup.h"
 #include "LLMChatterGroupInternal.h"
@@ -1406,6 +1407,9 @@ public:
 
         if (!player)
             return;
+
+        HandleAmbientPlayerUpdateZone(
+            player, newZone);
 
         // Eviction sweep + cleanup under mutex
         {

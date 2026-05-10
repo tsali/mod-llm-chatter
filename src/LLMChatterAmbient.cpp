@@ -24,6 +24,7 @@
 #include <algorithm>
 #include <ctime>
 #include <map>
+#include <mutex>
 #include <random>
 #include <set>
 #include <string>
@@ -31,6 +32,18 @@
 
 static std::map<std::string, time_t> _ambientCooldownCache;
 static std::map<uint32, WeatherState> _zoneWeatherState;
+static std::mutex _zoneWeatherStateMutex;
+
+struct PlayerWeatherContext
+{
+    WeatherState state;
+    uint32 sourceZoneId;
+    uint32 currentZoneId;
+    time_t updatedAt;
+};
+
+static std::map<uint32, PlayerWeatherContext> _playerWeatherContext;
+static std::mutex _playerWeatherContextMutex;
 
 static std::string GetSeasonName()
 {
@@ -323,6 +336,110 @@ static std::string GetWeatherStateName(
     }
 }
 
+static bool GetCachedWeatherState(
+    uint32 zoneId, WeatherState& state)
+{
+    std::lock_guard<std::mutex> lock(
+        _zoneWeatherStateMutex);
+    auto weatherIt = _zoneWeatherState.find(zoneId);
+    if (weatherIt == _zoneWeatherState.end())
+        return false;
+
+    state = weatherIt->second;
+    return true;
+}
+
+static void SetPlayerWeatherContext(
+    Player* player, WeatherState state,
+    uint32 sourceZoneId, uint32 currentZoneId)
+{
+    if (!player || IsPlayerBot(player))
+        return;
+
+    std::lock_guard<std::mutex> lock(
+        _playerWeatherContextMutex);
+    _playerWeatherContext[
+        player->GetGUID().GetCounter()] = {
+            state,
+            sourceZoneId,
+            currentZoneId,
+            time(nullptr)};
+}
+
+static std::string GetCachedWeatherName(
+    uint32 zoneId)
+{
+    WeatherState state = WEATHER_STATE_FINE;
+    if (GetCachedWeatherState(zoneId, state))
+        return GetWeatherStateName(state);
+
+    time_t bestUpdatedAt = 0;
+    WeatherState bestState = WEATHER_STATE_FINE;
+    bool foundCarriedWeather = false;
+    auto const& sessions =
+        sWorldSessionMgr->GetAllSessions();
+    for (auto const& pair : sessions)
+    {
+        WorldSession* session = pair.second;
+        if (!session || session->PlayerLoading())
+            continue;
+
+        Player* player = session->GetPlayer();
+        if (!player || !player->IsInWorld())
+            continue;
+
+        if (IsPlayerBot(player)
+            || player->GetZoneId() != zoneId
+            || !IsInOverworld(player))
+        {
+            continue;
+        }
+
+        std::lock_guard<std::mutex> lock(
+            _playerWeatherContextMutex);
+        auto contextIt =
+            _playerWeatherContext.find(
+                player->GetGUID().GetCounter());
+        if (contextIt != _playerWeatherContext.end()
+            && contextIt->second.updatedAt
+                >= bestUpdatedAt)
+        {
+            bestState = contextIt->second.state;
+            bestUpdatedAt =
+                contextIt->second.updatedAt;
+            foundCarriedWeather = true;
+        }
+    }
+
+    if (foundCarriedWeather)
+        return GetWeatherStateName(bestState);
+
+    return "";
+}
+
+void HandleAmbientPlayerUpdateZone(
+    Player* player, uint32 newZone)
+{
+    if (!player || IsPlayerBot(player))
+        return;
+
+    WeatherState state = WEATHER_STATE_FINE;
+    if (GetCachedWeatherState(newZone, state))
+    {
+        SetPlayerWeatherContext(
+            player, state, newZone, newZone);
+        return;
+    }
+
+    std::lock_guard<std::mutex> lock(
+        _playerWeatherContextMutex);
+    auto contextIt =
+        _playerWeatherContext.find(
+            player->GetGUID().GetCounter());
+    if (contextIt != _playerWeatherContext.end())
+        contextIt->second.currentZoneId = newZone;
+}
+
 static std::string GetWeatherCategory(
     WeatherState state)
 {
@@ -369,16 +486,18 @@ void HandleWeatherChange(
     if (!sLLMChatterConfig->IsEnabled()
         || !sLLMChatterConfig->_useEventSystem)
         return;
-    if (!sLLMChatterConfig->_eventsWeather)
-        return;
 
     uint32 zoneId = weather->GetZone();
     WeatherState prevState = WEATHER_STATE_FINE;
-    auto it = _zoneWeatherState.find(zoneId);
-    if (it != _zoneWeatherState.end())
-        prevState = it->second;
+    {
+        std::lock_guard<std::mutex> lock(
+            _zoneWeatherStateMutex);
+        auto it = _zoneWeatherState.find(zoneId);
+        if (it != _zoneWeatherState.end())
+            prevState = it->second;
 
-    _zoneWeatherState[zoneId] = state;
+        _zoneWeatherState[zoneId] = state;
+    }
 
     bool hasRealPlayer = false;
     auto const& sessions =
@@ -397,10 +516,14 @@ void HandleWeatherChange(
             && player->GetZoneId() == zoneId
             && IsInOverworld(player))
         {
+            SetPlayerWeatherContext(
+                player, state, zoneId, zoneId);
             hasRealPlayer = true;
-            break;
         }
     }
+
+    if (!sLLMChatterConfig->_eventsWeather)
+        return;
 
     if (!hasRealPlayer)
         return;
@@ -570,7 +693,17 @@ void CheckDayNightTransition(
 
 void CheckAmbientWeather()
 {
-    for (auto const& pair : _zoneWeatherState)
+    std::vector<std::pair<uint32, WeatherState>>
+        weatherSnapshot;
+    {
+        std::lock_guard<std::mutex> lock(
+            _zoneWeatherStateMutex);
+        weatherSnapshot.assign(
+            _zoneWeatherState.begin(),
+            _zoneWeatherState.end());
+    }
+
+    for (auto const& pair : weatherSnapshot)
     {
         uint32 zoneId = pair.first;
         WeatherState state = pair.second;
@@ -771,11 +904,8 @@ static void QueueChatterRequest(
 
     std::string escapedZoneName =
         EscapeString(zoneName);
-    std::string currentWeather = "clear";
-    auto weatherIt = _zoneWeatherState.find(zoneId);
-    if (weatherIt != _zoneWeatherState.end())
-        currentWeather =
-            GetWeatherStateName(weatherIt->second);
+    std::string currentWeather =
+        GetCachedWeatherName(zoneId);
 
     if (isConversation && bot2)
     {
