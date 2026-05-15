@@ -4,8 +4,7 @@
 -- --------------------------------------------------------
 
 -- Event queue for game events that may trigger chatter
-DROP TABLE IF EXISTS `llm_chatter_events`;
-CREATE TABLE `llm_chatter_events` (
+CREATE TABLE IF NOT EXISTS `llm_chatter_events` (
     `id` INT UNSIGNED NOT NULL AUTO_INCREMENT,
     `event_type` ENUM(
         'weather_change',
@@ -105,8 +104,7 @@ CREATE TABLE `llm_chatter_events` (
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4;
 
 -- Queue for chatter requests (sent to Python bridge)
-DROP TABLE IF EXISTS `llm_chatter_queue`;
-CREATE TABLE `llm_chatter_queue` (
+CREATE TABLE IF NOT EXISTS `llm_chatter_queue` (
     `id` INT UNSIGNED NOT NULL AUTO_INCREMENT,
     `request_type` ENUM('statement', 'conversation') NOT NULL DEFAULT 'statement',
     `bot1_guid` INT UNSIGNED NOT NULL,
@@ -143,8 +141,7 @@ CREATE TABLE `llm_chatter_queue` (
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4;
 
 -- Messages to be delivered (from completed requests or events)
-DROP TABLE IF EXISTS `llm_chatter_messages`;
-CREATE TABLE `llm_chatter_messages` (
+CREATE TABLE IF NOT EXISTS `llm_chatter_messages` (
     `id` INT UNSIGNED NOT NULL AUTO_INCREMENT,
     `queue_id` INT UNSIGNED DEFAULT NULL,
     `event_id` INT UNSIGNED DEFAULT NULL,
@@ -171,8 +168,7 @@ CREATE TABLE `llm_chatter_messages` (
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4;
 
 -- Per-group party chat pacing reservations.
-DROP TABLE IF EXISTS `llm_party_chat_pacing`;
-CREATE TABLE `llm_party_chat_pacing` (
+CREATE TABLE IF NOT EXISTS `llm_party_chat_pacing` (
     `group_id` INT UNSIGNED NOT NULL,
     `next_available_at` TIMESTAMP NULL DEFAULT NULL,
     `last_activity_at` TIMESTAMP NULL DEFAULT NULL,
@@ -184,8 +180,7 @@ CREATE TABLE `llm_party_chat_pacing` (
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4;
 
 -- Personality traits for bots in player groups
-DROP TABLE IF EXISTS `llm_group_bot_traits`;
-CREATE TABLE `llm_group_bot_traits` (
+CREATE TABLE IF NOT EXISTS `llm_group_bot_traits` (
     `id` INT UNSIGNED NOT NULL AUTO_INCREMENT,
     `group_id` INT UNSIGNED NOT NULL,
     `bot_guid` INT UNSIGNED NOT NULL,
@@ -216,8 +211,7 @@ CREATE TABLE `llm_group_bot_traits` (
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4;
 
 -- Chat history for General channel conversations (per-zone)
-DROP TABLE IF EXISTS `llm_general_chat_history`;
-CREATE TABLE `llm_general_chat_history` (
+CREATE TABLE IF NOT EXISTS `llm_general_chat_history` (
     `id` INT UNSIGNED AUTO_INCREMENT PRIMARY KEY,
     `zone_id` INT UNSIGNED NOT NULL,
     `speaker_name` VARCHAR(64) NOT NULL,
@@ -229,8 +223,7 @@ CREATE TABLE `llm_general_chat_history` (
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4;
 
 -- Pre-cached LLM responses for instant combat delivery
-DROP TABLE IF EXISTS `llm_group_cached_responses`;
-CREATE TABLE `llm_group_cached_responses` (
+CREATE TABLE IF NOT EXISTS `llm_group_cached_responses` (
     `id` INT UNSIGNED NOT NULL AUTO_INCREMENT,
     `group_id` INT UNSIGNED NOT NULL,
     `bot_guid` INT UNSIGNED NOT NULL,
@@ -247,8 +240,7 @@ CREATE TABLE `llm_group_cached_responses` (
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4;
 
 -- Chat history for group conversations (provides context)
-DROP TABLE IF EXISTS `llm_group_chat_history`;
-CREATE TABLE `llm_group_chat_history` (
+CREATE TABLE IF NOT EXISTS `llm_group_chat_history` (
     `id` INT UNSIGNED AUTO_INCREMENT PRIMARY KEY,
     `group_id` INT UNSIGNED NOT NULL,
     `speaker_guid` INT UNSIGNED NOT NULL,

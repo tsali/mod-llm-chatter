@@ -1965,7 +1965,7 @@ Migration `20260403_proximity_chatter.sql` adds two columns to
 - `player_guid` INT UNSIGNED DEFAULT NULL — real player GUID for
   proximity scene tracking
 
-Base schema `llm_chatter_tables.sql` updated to match.
+Base schema `00000000_llm_chatter_tables.sql` updated to match.
 
 ---
 

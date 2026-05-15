@@ -417,10 +417,12 @@ Make sure WoW is in the foreground (the agent only captures when WoW is the acti
 ## Upgrading
 
 > **First-time installing the module? Skip this section.**
-> The base schema in `data/sql/characters/base/` already contains
-> everything every migration adds. Fresh installs create all
-> tables automatically on first worldserver startup — you do
-> **not** need to run any of the SQL files below.
+> The base schema in
+> `data/sql/characters/base/00000000_llm_chatter_tables.sql`
+> already contains everything every migration adds. Fresh installs
+> create all tables automatically on first worldserver startup before
+> dated migrations run — you do **not** need to run any of the SQL
+> files below.
 
 **Existing installs** must apply migration scripts manually
 when updating to a newer version. Migrations live in
