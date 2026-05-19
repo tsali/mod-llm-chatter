@@ -550,7 +550,7 @@ def process_conversation(
     Args:
         db: Database connection
         cursor: Database cursor
-        client: LLM client (Anthropic or OpenAI)
+        client: LLM provider client
         config: Configuration dict
         request: Queue request row
         bots: List of 2-4 bot dicts with guid, name,

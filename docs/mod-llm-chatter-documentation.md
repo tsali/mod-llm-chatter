@@ -536,6 +536,8 @@ Supported providers:
 
 - Anthropic
 - OpenAI
+- Google Gemini
+- OpenRouter
 - Ollama
 
 Examples:
@@ -548,6 +550,23 @@ LLMChatter.Model = haiku
 ```ini
 LLMChatter.Provider = openai
 LLMChatter.Model = gpt4o-mini
+```
+
+```ini
+LLMChatter.Provider = google
+LLMChatter.Model = gemini-3.1-flash-lite
+```
+
+```ini
+LLMChatter.Provider = google
+LLMChatter.Model = gemini-2.5-flash
+LLMChatter.Google.ThinkingBudget = 0
+```
+
+```ini
+LLMChatter.Provider = openrouter
+LLMChatter.Model = openai/gpt-4o-mini
+LLMChatter.OpenRouter.ApiKey = sk-or-v1-xxxxx
 ```
 
 ```ini
@@ -571,6 +590,10 @@ Provider behavior:
   on the API call (native system prompt support)
 - **OpenAI**: system content sent as a `{"role": "system", ...}`
   message prepended to the messages array
+- **Google Gemini**: uses Google's OpenAI-compatible chat-completions
+  endpoint, so system content is sent as a system role message
+- **OpenRouter**: uses OpenRouter's OpenAI-compatible
+  chat-completions endpoint with optional attribution headers
 - **Ollama**: same as OpenAI (system role message)
 
 When a plain string is passed to `call_llm()` instead of
@@ -584,6 +607,8 @@ When a plain string is passed to `call_llm()` instead of
 | `_split_prompt()` | Detects `PromptParts` and splits into system + user content |
 | `_build_chat_messages()` | Assembles the provider-specific messages array |
 | `_ollama_user_msg()` | Formats the user message for Ollama's chat API |
+| `_apply_google_options()` | Applies Gemini reasoning/thinking settings for OpenAI compatibility |
+| `_openrouter_headers()` | Builds optional OpenRouter attribution headers |
 
 ---
 
@@ -1766,7 +1791,7 @@ from the resulting description.
 1. Captures the WoW game window via Win32 API (`BitBlt`)
 2. Crops UI elements (bottom 20%, sides 12%) to isolate the 3D world
 3. Resizes to `MaxWidthPx` and encodes as JPEG (`JpegQuality`)
-4. Sends to vision LLM (OpenAI or Anthropic)
+4. Sends to vision LLM (OpenAI, Anthropic, Google, or OpenRouter)
 5. Receives structured JSON: environment description, atmosphere,
    canonical tags (`landmark_type`, `biome`, `weather`, `time_of_day`,
    `creature_presence`)
@@ -1801,7 +1826,7 @@ All under `LLMChatter.Screenshot.*`:
 | `IntervalMinSeconds` | 45 | Minimum seconds between captures |
 | `IntervalMaxSeconds` | 90 | Maximum seconds between captures |
 | `Chance` | 60 | % chance per interval tick |
-| `VisionProvider` | openai | Vision LLM provider (openai or anthropic) |
+| `VisionProvider` | openai | Vision LLM provider (openai, anthropic, google, or openrouter) |
 | `VisionModel` | gpt-4o-mini | Vision model name |
 | `ConversationChance` | 30 | % chance of multi-bot conversation vs statement |
 | `MaxWidthPx` | 800 | Max image width for vision API |

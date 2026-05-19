@@ -3363,7 +3363,8 @@ def build_precache_combat_pull_prompt(
         "- Must include {target} exactly once\n"
         "- Reflect your personality\n"
         "- No quotes, no emojis\n"
-        "- Respond with ONLY the message text"
+        "- Put ONLY the spoken words in the "
+        "\"message\" JSON field"
     )
     if anti_rep:
         prompt += f"\n\n{anti_rep}"
@@ -3459,7 +3460,8 @@ def build_precache_state_prompt(
     prompt += (
         "- Reflect your personality\n"
         "- No quotes, no emojis\n"
-        "- Respond with ONLY the message text"
+        "- Put ONLY the spoken words in the "
+        "\"message\" JSON field"
     )
     if anti_rep:
         prompt += f"\n\n{anti_rep}"
@@ -3526,7 +3528,8 @@ def build_precache_spell_support_prompt(
         "for the spell name\n"
         "- Reflect your personality\n"
         "- No quotes, no emojis\n"
-        "- Respond with ONLY the message text"
+        "- Put ONLY the spoken words in the "
+        "\"message\" JSON field"
     )
     if anti_rep:
         prompt += f"\n\n{anti_rep}"
@@ -3639,7 +3642,8 @@ def build_precache_spell_offensive_prompt(
         + style_rule +
         "- Reflect your personality\n"
         "- No quotes, no emojis\n"
-        "- Respond with ONLY the message text"
+        "- Put ONLY the spoken words in the "
+        "\"message\" JSON field"
     )
     if anti_rep:
         prompt += f"\n\n{anti_rep}"

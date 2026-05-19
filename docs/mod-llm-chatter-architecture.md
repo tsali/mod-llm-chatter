@@ -68,7 +68,8 @@ The screenshot vision feature adds a second event source outside the
 C++ server:
 
 1. Host-side `screenshot_agent.py` captures the WoW game window.
-2. Agent sends the JPEG to a vision LLM (OpenAI or Anthropic).
+2. Agent sends the JPEG to a vision LLM (OpenAI, Anthropic, Google,
+   or OpenRouter).
 3. Vision LLM returns structured JSON (description, atmosphere,
    canonical tags).
 4. Agent inserts a `bot_group_screenshot_observation` row into
@@ -134,7 +135,8 @@ It carries two extra attributes:
    auto-detects `PromptParts` via `_split_prompt()`.
 3. Provider dispatch:
    - **Anthropic**: native `system=` parameter + user message
-   - **OpenAI / Ollama**: system role message + user role message
+   - **OpenAI / Google / OpenRouter / Ollama**: system role message +
+     user role message
 4. If a plain string is passed instead of `PromptParts`, the entire
    string is sent as a single user message (backward compatibility).
 
@@ -419,7 +421,7 @@ This asymmetry is known and acceptable in the shipped source state.
 |---|---|
 | `tools/chatter_shared.py` | Compatibility facade and residual shared helpers only: `PromptParts(str)` class for system/user prompt separation, `find_addressed_bot()` (with multi-addressed intent detection), `calculate_dynamic_delay()` (with responsive mode), `should_include_action()` (single RNG roll for narrator action gating at conversation delivery sites), `resolve_gender()` (maps numeric gender 0/1 to male/female with DB fallback), `build_bot_identity()` (name/race/class/gender identity string used by all prompt builders). Avoid adding new domain-specific handler logic here unless it is truly cross-domain. |
 | `tools/chatter_text.py` | Parsing, sanitization, anti-repetition |
-| `tools/chatter_llm.py` | Provider/model calls; `get_llm_client()` shared client factory; `_split_prompt()`, `_build_chat_messages()`, `_ollama_user_msg()` for system/user prompt separation; `label=` param logs every call via `chatter_request_logger` |
+| `tools/chatter_llm.py` | Provider/model calls for Anthropic, OpenAI, Google Gemini, OpenRouter, and Ollama; `get_llm_client()` shared client factory; `_split_prompt()`, `_build_chat_messages()`, `_ollama_user_msg()`, `_apply_google_options()`, `_openrouter_headers()` for system/user prompt separation and provider tuning; `label=` param logs every call via `chatter_request_logger` |
 | `tools/chatter_db.py` | DB access, inserts, zone/cache queries, `any_real_players_online()`, `cleanup_stale_groups()`, `cleanup_all_session_data()` |
 | `tools/chatter_links.py` | WoW link parsing and prompt-side link enrichment for player messages |
 | `tools/chatter_prompts.py` | Ambient/event prompt builders |
@@ -435,7 +437,7 @@ This asymmetry is known and acceptable in the shipped source state.
 
 | File | Primary ownership |
 |---|---|
-| `tools/screenshot_agent.py` | Host-side capture agent (runs outside Docker). Captures WoW window via Win32 API, crops UI clutter (bottom 20%, sides 12%), sends JPEG to vision LLM (OpenAI or Anthropic), receives structured JSON with environment description, atmosphere, and canonical tags. Queues `bot_group_screenshot_observation` events directly into `llm_chatter_events`. Configurable interval, chance, and vision provider/model |
+| `tools/screenshot_agent.py` | Host-side capture agent (runs outside Docker). Captures WoW window via Win32 API, crops UI clutter (bottom 20%, sides 12%), sends JPEG to vision LLM (OpenAI, Anthropic, Google, or OpenRouter), receives structured JSON with environment description, atmosphere, and canonical tags. Queues `bot_group_screenshot_observation` events directly into `llm_chatter_events`. Configurable interval, chance, and vision provider/model |
 | `tools/chatter_screenshot_handler.py` | Bridge handler for `bot_group_screenshot_observation` events. Generates in-character bot comments using personality traits, zone/subzone context, and the vision description. Supports single statements via `run_single_reaction()` and multi-bot conversations via `append_conversation_json_instruction()` / `parse_conversation_response()`. Canonical tag dedup prevents repetitive observations |
 
 ### Development tools

@@ -7,7 +7,11 @@ from typing import Any, Optional
 
 from chatter_constants import (
     DEFAULT_ANTHROPIC_MODEL,
+    DEFAULT_GOOGLE_MODEL,
     DEFAULT_OPENAI_MODEL,
+    DEFAULT_OPENROUTER_MODEL,
+    GOOGLE_OPENAI_BASE_URL,
+    OPENROUTER_BASE_URL,
 )
 
 logger = logging.getLogger(__name__)
@@ -41,6 +45,22 @@ def _build_chat_messages(sys_msg, user_content):
     return messages
 
 
+def _openrouter_headers(config):
+    """Build optional OpenRouter app-attribution headers."""
+    headers = {}
+    referer = str(config.get(
+        'LLMChatter.OpenRouter.HttpReferer', ''
+    )).strip()
+    title = str(config.get(
+        'LLMChatter.OpenRouter.Title', ''
+    )).strip()
+    if referer:
+        headers['HTTP-Referer'] = referer
+    if title:
+        headers['X-OpenRouter-Title'] = title
+    return headers or None
+
+
 def _ollama_user_msg(user_msg, config):
     """Apply Ollama-specific transforms to user msg
     (e.g. /no_think prefix)."""
@@ -55,9 +75,116 @@ def _ollama_user_msg(user_msg, config):
     return user_msg
 
 
+def _google_reasoning_effort(config):
+    """Return Gemini OpenAI-compatible reasoning effort."""
+    if _google_thinking_config(config):
+        return None
+    effort = str(config.get(
+        'LLMChatter.Google.ReasoningEffort', 'minimal'
+    )).strip().lower()
+    if not effort or effort in ('0', 'none', 'off', 'disabled'):
+        return None
+    return effort
+
+
+def _google_thinking_config(config):
+    """Return Gemini thinking_config for OpenAI compatibility."""
+    raw_budget = str(config.get(
+        'LLMChatter.Google.ThinkingBudget', ''
+    )).strip()
+    if not raw_budget:
+        return None
+    try:
+        return {'thinking_budget': int(raw_budget)}
+    except (TypeError, ValueError):
+        logger.warning(
+            "Invalid LLMChatter.Google.ThinkingBudget=%r",
+            raw_budget,
+        )
+        return None
+
+
+def _apply_google_options(kwargs, config):
+    """Attach Gemini-specific OpenAI compatibility options."""
+    thinking_config = _google_thinking_config(config)
+    if thinking_config:
+        kwargs['extra_body'] = {
+            'extra_body': {
+                'google': {
+                    'thinking_config': thinking_config,
+                },
+            },
+        }
+        return
+
+    effort = _google_reasoning_effort(config)
+    if effort:
+        kwargs['reasoning_effort'] = effort
+
+
+def _effective_max_tokens(provider, config, max_tokens):
+    """Adjust provider-specific output budget."""
+    if provider != 'google':
+        return max_tokens
+    try:
+        multiplier = float(config.get(
+            'LLMChatter.Google.MaxTokensMultiplier', 2
+        ))
+    except (TypeError, ValueError):
+        multiplier = 2.0
+    multiplier = max(1.0, min(multiplier, 8.0))
+    return int(max_tokens * multiplier)
+
+
+def _extract_chat_content(response, label=''):
+    """Extract text from an OpenAI-compatible chat response."""
+    choice = response.choices[0]
+    message = choice.message
+    content = getattr(message, 'content', None)
+    if isinstance(content, str):
+        return content.strip()
+    if isinstance(content, list):
+        parts = []
+        for part in content:
+            if isinstance(part, dict):
+                text = part.get('text')
+            else:
+                text = getattr(part, 'text', None)
+            if text:
+                parts.append(text)
+        if parts:
+            return ''.join(parts).strip()
+
+    finish_reason = getattr(choice, 'finish_reason', None)
+    tool_calls = getattr(message, 'tool_calls', None)
+    logger.warning(
+        "LLM returned no text content (%s): "
+        "finish_reason=%s tool_calls=%s",
+        label, finish_reason, bool(tool_calls),
+    )
+    return None
+
+
 def resolve_model(model_name: str) -> str:
-    """Pass through model name (no aliasing)."""
-    return model_name
+    """Resolve friendly model aliases to provider model IDs."""
+    normalized = (model_name or '').strip()
+    aliases = {
+        'haiku': DEFAULT_ANTHROPIC_MODEL,
+        'gpt4o-mini': DEFAULT_OPENAI_MODEL,
+        'gpt-4o-mini': DEFAULT_OPENAI_MODEL,
+        'openrouter-auto': 'openrouter/auto',
+        'google-2.5-flash': 'gemini-2.5-flash',
+        'google2.5-flash': 'gemini-2.5-flash',
+        'gemini-2.5-flash': 'gemini-2.5-flash',
+        'google-3.1-flash-lite': 'gemini-3.1-flash-lite',
+        'google3.1-flash-lite': 'gemini-3.1-flash-lite',
+        'gemini-3.1-flash-lite': 'gemini-3.1-flash-lite',
+        'google-3-flash': 'gemini-3-flash-preview',
+        'google3-flash': 'gemini-3-flash-preview',
+        'gemini-3-flash': 'gemini-3-flash-preview',
+        'gemini-3-flash-preview': 'gemini-3-flash-preview',
+    }
+    return aliases.get(normalized.lower(), normalized)
 
 
 _main_client = None
@@ -104,6 +231,32 @@ def get_llm_client(config):
                     'LLMChatter.OpenAI.ApiKey', ''
                 ),
             )
+        elif provider == 'google':
+            import openai
+            _main_client = openai.OpenAI(
+                api_key=config.get(
+                    'LLMChatter.Google.ApiKey', ''
+                ),
+                base_url=config.get(
+                    'LLMChatter.Google.BaseUrl',
+                    GOOGLE_OPENAI_BASE_URL,
+                ),
+            )
+        elif provider == 'openrouter':
+            import openai
+            kwargs = {
+                'api_key': config.get(
+                    'LLMChatter.OpenRouter.ApiKey', ''
+                ),
+                'base_url': config.get(
+                    'LLMChatter.OpenRouter.BaseUrl',
+                    OPENROUTER_BASE_URL,
+                ),
+            }
+            headers = _openrouter_headers(config)
+            if headers:
+                kwargs['default_headers'] = headers
+            _main_client = openai.OpenAI(**kwargs)
         else:
             import anthropic
             _main_client = anthropic.Anthropic(
@@ -127,19 +280,33 @@ def call_llm(
     label: str = '',
     metadata: dict = None,
 ) -> str:
-    """Call LLM API (Anthropic, OpenAI, or Ollama)."""
+    """Call LLM API.
+
+    Supports Anthropic, OpenAI, Google, OpenRouter, and Ollama.
+    """
     provider = config.get(
         'LLMChatter.Provider', 'anthropic'
     ).lower()
+    default_model = DEFAULT_ANTHROPIC_MODEL
+    if provider == 'openai':
+        default_model = DEFAULT_OPENAI_MODEL
+    elif provider == 'google':
+        default_model = DEFAULT_GOOGLE_MODEL
+    elif provider == 'openrouter':
+        default_model = DEFAULT_OPENROUTER_MODEL
     model = config.get(
-        'LLMChatter.Model', DEFAULT_ANTHROPIC_MODEL
+        'LLMChatter.Model', default_model
     )
+    model = resolve_model(model)
     if max_tokens_override is not None:
         max_tokens = max_tokens_override
     else:
         max_tokens = int(
             config.get('LLMChatter.MaxTokens', 200)
         )
+    request_max_tokens = _effective_max_tokens(
+        provider, config, max_tokens
+    )
     temperature = float(
         config.get('LLMChatter.Temperature', 0.85)
     )
@@ -161,7 +328,7 @@ def call_llm(
             )
             response = client.chat.completions.create(
                 model=model,
-                max_tokens=max_tokens,
+                max_tokens=request_max_tokens,
                 temperature=temperature,
                 messages=_build_chat_messages(
                     sys_msg, sent_user_msg
@@ -172,28 +339,31 @@ def call_llm(
                     }
                 }
             )
-            result = (
-                response.choices[0]
-                .message.content.strip()
+            result = _extract_chat_content(
+                response, label
             )
-        elif provider == 'openai':
-            response = client.chat.completions.create(
-                model=model,
-                max_tokens=max_tokens,
-                temperature=temperature,
-                messages=_build_chat_messages(
+        elif provider in ('openai', 'google', 'openrouter'):
+            kwargs = {
+                'model': model,
+                'max_tokens': request_max_tokens,
+                'temperature': temperature,
+                'messages': _build_chat_messages(
                     sys_msg, user_msg
                 ),
+            }
+            if provider == 'google':
+                _apply_google_options(kwargs, config)
+            response = client.chat.completions.create(
+                **kwargs
             )
-            result = (
-                response.choices[0]
-                .message.content.strip()
+            result = _extract_chat_content(
+                response, label
             )
         else:
             # Anthropic (default)
             kwargs = {
                 "model": model,
-                "max_tokens": max_tokens,
+                "max_tokens": request_max_tokens,
                 "temperature": temperature,
                 "messages": [{
                     "role": "user",
@@ -250,9 +420,6 @@ def _get_quick_analyze_client(config):
     global _quick_analyze_client
     global _quick_analyze_provider
 
-    import anthropic
-    import openai
-
     qa_provider = config.get(
         'LLMChatter.QuickAnalyze.Provider', ''
     ).strip().lower()
@@ -275,6 +442,7 @@ def _get_quick_analyze_client(config):
         # Create new client for the quick analyze
         # provider
         if qa_provider == 'ollama':
+            import openai
             base_url = config.get(
                 'LLMChatter.Ollama.BaseUrl',
                 'http://localhost:11434'
@@ -287,6 +455,7 @@ def _get_quick_analyze_client(config):
                 api_key="ollama"
             )
         elif qa_provider == 'openai':
+            import openai
             api_key = config.get(
                 'LLMChatter.OpenAI.ApiKey', ''
             )
@@ -295,7 +464,40 @@ def _get_quick_analyze_client(config):
             _quick_analyze_client = openai.OpenAI(
                 api_key=api_key
             )
+        elif qa_provider == 'google':
+            import openai
+            api_key = config.get(
+                'LLMChatter.Google.ApiKey', ''
+            )
+            if not api_key:
+                return None, main_provider
+            _quick_analyze_client = openai.OpenAI(
+                api_key=api_key,
+                base_url=config.get(
+                    'LLMChatter.Google.BaseUrl',
+                    GOOGLE_OPENAI_BASE_URL,
+                ),
+            )
+        elif qa_provider == 'openrouter':
+            import openai
+            api_key = config.get(
+                'LLMChatter.OpenRouter.ApiKey', ''
+            )
+            if not api_key:
+                return None, main_provider
+            kwargs = {
+                'api_key': api_key,
+                'base_url': config.get(
+                    'LLMChatter.OpenRouter.BaseUrl',
+                    OPENROUTER_BASE_URL,
+                ),
+            }
+            headers = _openrouter_headers(config)
+            if headers:
+                kwargs['default_headers'] = headers
+            _quick_analyze_client = openai.OpenAI(**kwargs)
         elif qa_provider == 'anthropic':
+            import anthropic
             api_key = config.get(
                 'LLMChatter.Anthropic.ApiKey', ''
             )
@@ -325,7 +527,8 @@ def quick_llm_analyze(
     Uses the configured QuickAnalyze provider/model,
     or defaults to the fastest model on the main
     provider (Haiku for Anthropic, gpt-4o-mini for
-    OpenAI, main model for Ollama).
+    OpenAI, Gemini Flash for Google, OpenRouter's
+    configured model, main model for Ollama).
 
     Useful for tasks like:
     - Determining which bot a player is addressing
@@ -340,8 +543,10 @@ def quick_llm_analyze(
     )
     if qa_client is not None:
         active_client = qa_client
+        using_quick_provider = True
     else:
         active_client = client
+        using_quick_provider = False
 
     # Resolve model
     qa_model = config.get(
@@ -354,12 +559,29 @@ def quick_llm_analyze(
         model = DEFAULT_ANTHROPIC_MODEL
     elif provider == 'openai':
         model = DEFAULT_OPENAI_MODEL
+    elif provider == 'google':
+        if using_quick_provider:
+            model = DEFAULT_GOOGLE_MODEL
+        else:
+            model = config.get(
+                'LLMChatter.Model',
+                DEFAULT_GOOGLE_MODEL
+            )
+    elif provider == 'openrouter':
+        if using_quick_provider:
+            model = DEFAULT_OPENROUTER_MODEL
+        else:
+            model = config.get(
+                'LLMChatter.Model',
+                DEFAULT_OPENROUTER_MODEL
+            )
     else:
         # Ollama: use configured model
         model = config.get(
             'LLMChatter.Model',
             DEFAULT_ANTHROPIC_MODEL
         )
+    model = resolve_model(model)
 
     t0 = time.monotonic()
     result = None
@@ -377,9 +599,11 @@ def quick_llm_analyze(
             response = (
                 active_client
                 .chat.completions.create(
-                    model=model,
-                    max_tokens=max_tokens,
-                    temperature=0.1,
+                model=model,
+                max_tokens=_effective_max_tokens(
+                    provider, config, max_tokens
+                ),
+                temperature=0.1,
                     messages=_build_chat_messages(
                         sys_msg, sent_user_msg
                     ),
@@ -390,25 +614,30 @@ def quick_llm_analyze(
                     }
                 )
             )
-            result = (
-                response.choices[0]
-                .message.content.strip()
+            result = _extract_chat_content(
+                response, label
             )
-        elif provider == 'openai':
+        elif provider in ('openai', 'google', 'openrouter'):
+            kwargs = {
+                'model': model,
+                'max_tokens': _effective_max_tokens(
+                    provider, config, max_tokens
+                ),
+                'temperature': 0.1,
+                'messages': _build_chat_messages(
+                    sys_msg, user_msg
+                ),
+            }
+            if provider == 'google':
+                _apply_google_options(kwargs, config)
             response = (
                 active_client
                 .chat.completions.create(
-                    model=model,
-                    max_tokens=max_tokens,
-                    temperature=0.1,
-                    messages=_build_chat_messages(
-                        sys_msg, user_msg
-                    ),
+                    **kwargs
                 )
             )
-            result = (
-                response.choices[0]
-                .message.content.strip()
+            result = _extract_chat_content(
+                response, label
             )
         else:
             kwargs = {

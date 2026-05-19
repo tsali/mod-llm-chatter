@@ -24,6 +24,8 @@ from chatter_shared import (
     strip_speaker_prefix,
 )
 from chatter_constants import PERSONALITY_TRAITS
+from chatter_constants import GOOGLE_OPENAI_BASE_URL
+from chatter_constants import OPENROUTER_BASE_URL
 from chatter_db import mark_event
 
 logger = logging.getLogger(__name__)
@@ -392,6 +394,42 @@ def _generate_bot_tone(
                     'LLMChatter.OpenAI.ApiKey', ''
                 )
             )
+        elif provider == 'google':
+            import openai as _openai
+            client = _openai.OpenAI(
+                api_key=config.get(
+                    'LLMChatter.Google.ApiKey', ''
+                ),
+                base_url=config.get(
+                    'LLMChatter.Google.BaseUrl',
+                    GOOGLE_OPENAI_BASE_URL,
+                ),
+            )
+        elif provider == 'openrouter':
+            import openai as _openai
+            headers = {}
+            referer = config.get(
+                'LLMChatter.OpenRouter.HttpReferer', ''
+            ).strip()
+            title = config.get(
+                'LLMChatter.OpenRouter.Title', ''
+            ).strip()
+            if referer:
+                headers['HTTP-Referer'] = referer
+            if title:
+                headers['X-OpenRouter-Title'] = title
+            kwargs = {
+                'api_key': config.get(
+                    'LLMChatter.OpenRouter.ApiKey', ''
+                ),
+                'base_url': config.get(
+                    'LLMChatter.OpenRouter.BaseUrl',
+                    OPENROUTER_BASE_URL,
+                ),
+            }
+            if headers:
+                kwargs['default_headers'] = headers
+            client = _openai.OpenAI(**kwargs)
         else:
             import anthropic as _anthropic
             client = _anthropic.Anthropic(
@@ -585,6 +623,42 @@ def _generate_bot_backstory(
                     'LLMChatter.OpenAI.ApiKey', ''
                 )
             )
+        elif provider == 'google':
+            import openai as _openai
+            client = _openai.OpenAI(
+                api_key=config.get(
+                    'LLMChatter.Google.ApiKey', ''
+                ),
+                base_url=config.get(
+                    'LLMChatter.Google.BaseUrl',
+                    GOOGLE_OPENAI_BASE_URL,
+                ),
+            )
+        elif provider == 'openrouter':
+            import openai as _openai
+            headers = {}
+            referer = config.get(
+                'LLMChatter.OpenRouter.HttpReferer', ''
+            ).strip()
+            title = config.get(
+                'LLMChatter.OpenRouter.Title', ''
+            ).strip()
+            if referer:
+                headers['HTTP-Referer'] = referer
+            if title:
+                headers['X-OpenRouter-Title'] = title
+            kwargs = {
+                'api_key': config.get(
+                    'LLMChatter.OpenRouter.ApiKey', ''
+                ),
+                'base_url': config.get(
+                    'LLMChatter.OpenRouter.BaseUrl',
+                    OPENROUTER_BASE_URL,
+                ),
+            }
+            if headers:
+                kwargs['default_headers'] = headers
+            client = _openai.OpenAI(**kwargs)
         else:
             import anthropic as _anthropic
             client = _anthropic.Anthropic(

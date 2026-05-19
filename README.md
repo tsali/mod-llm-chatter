@@ -46,6 +46,27 @@ Built from the ground up for **fantasy roleplay immersion**. Every system, perso
 
 ## Changelog
 
+### 2026-05-19 - Google Gemini and OpenRouter Provider Support
+
+* **Google Gemini Support**: Chatter can now use Google's
+  OpenAI-compatible Gemini endpoint. `gemini-3.1-flash-lite` is the
+  recommended Google model, with Gemini-specific reasoning/thinking
+  controls for reliable structured JSON output.
+* **OpenRouter Support**: Chatter can now use OpenRouter through its
+  OpenAI-compatible API. Recommended OpenRouter model slugs include
+  `anthropic/claude-haiku-4.5`, `openai/gpt-4o-mini`, and
+  `openai/gpt-4.1-mini`.
+* **Provider Setup Docs**: README and config examples now cover
+  Anthropic, OpenAI, Google, OpenRouter, and Ollama, including matching
+  provider-specific API key settings.
+* **Screenshot Vision Provider Coverage**: Screenshot vision setup now
+  documents OpenAI, Anthropic, Google, and OpenRouter provider options.
+* **Runtime Validation**: OpenRouter was tested live with both
+  `openai/gpt-4o-mini` and `anthropic/claude-haiku-4.5` across
+  pre-cache, ambient, proximity, group idle, player message, and
+  General-to-party relay paths. No truncation or malformed response
+  pattern was observed in the request log during testing.
+
 ### 2026-05-11 - Immersion, Pacing, and Party Awareness
 
 * **General-to-Party Reactions**: Party bots can now react when they hear
@@ -135,7 +156,7 @@ Built from the ground up for **fantasy roleplay immersion**. Every system, perso
 
 1. Clone into `modules/` and build AzerothCore
 2. Copy `conf/mod_llm_chatter.conf.dist` to your config directory and name it `mod_llm_chatter.conf`
-3. Set your LLM provider and the matching API key (`LLMChatter.Anthropic.ApiKey`, `LLMChatter.OpenAI.ApiKey`, or no key when using Ollama)
+3. Set your LLM provider and the matching API key (`LLMChatter.Anthropic.ApiKey`, `LLMChatter.OpenAI.ApiKey`, `LLMChatter.Google.ApiKey`, `LLMChatter.OpenRouter.ApiKey`, or no key when using Ollama)
 4. Start the Python bridge
 5. Play, bots start chatting when grouped with players
 
@@ -154,17 +175,24 @@ This module requires a working AzerothCore server with mod-playerbots. If you do
 | AzerothCore | [Playerbot branch](https://github.com/mod-playerbots/azerothcore-wotlk/tree/Playerbot) (WotLK 3.3.5a) |
 | mod-playerbots | [liyunfan1223/mod-playerbots](https://github.com/mod-playerbots/mod-playerbots) |
 | Python | 3.8+ |
-| LLM Provider | Anthropic, OpenAI, or Ollama |
+| LLM Provider | Anthropic, OpenAI, Google Gemini, OpenRouter, or Ollama |
 
 ### Recommended Models
 
 Tested extensively with excellent results:
 - **Claude Haiku 4.5** (Anthropic),  fast, affordable, excellent quality
 - **GPT-4o-mini** (OpenAI),  great alternative, similar cost
+- **Gemini 3.1 Flash-Lite** (Google),  fast, cheap, tested with
+  structured chatter and pre-cache JSON
+- **Gemini 2.5 Flash** (Google),  reliable with
+  `LLMChatter.Google.ThinkingBudget = 0`
 - **GPT-4.1-mini** (OpenAI),  a little more expensive, but tested with
   fantastic quality and speed
+- **OpenRouter model slugs** such as `anthropic/claude-haiku-4.5`,
+  `openai/gpt-4o-mini`, and `openai/gpt-4.1-mini`, useful when users
+  want OpenRouter routing while keeping OpenAI-compatible calls
 
-Ollama is supported for local/free inference, but the module's advanced prompt architecture (structured JSON responses, system/user message separation, emote and action fields) demands strong instruction-following capabilities that smaller open-source models may not consistently deliver. For the best experience, we recommend Claude Haiku, GPT-4o-mini, or GPT-4.1-mini. See the config file header for Ollama setup details.
+Ollama is supported for local/free inference, but the module's advanced prompt architecture (structured JSON responses, system/user message separation, emote and action fields) demands strong instruction-following capabilities that smaller open-source models may not consistently deliver. For the best experience, we recommend Claude Haiku, GPT-4o-mini, GPT-4.1-mini, Gemini 3.1 Flash-Lite, or equivalent fast OpenRouter-hosted models such as Claude Haiku 4.5, GPT-4o-mini, or GPT-4.1-mini. See the config file header for provider setup details.
 
 ### Tuning the Chattiness
 
@@ -241,8 +269,8 @@ AiPlayerbot.RandomBotSayWithoutMaster = 0
 **1. Configure**
 
 Copy `modules/mod-llm-chatter/conf/mod_llm_chatter.conf.dist` to `env/dist/etc/modules/` and rename it to `mod_llm_chatter.conf`. Open it in a text editor and set at minimum:
-- `LLMChatter.Provider`,  choose `anthropic`, `openai`, or `ollama`
-- `LLMChatter.ApiKey`,  your API key from the chosen provider (not needed for Ollama)
+- `LLMChatter.Provider`,  choose `anthropic`, `openai`, `google`, `openrouter`, or `ollama`
+- the matching provider API key, for example `LLMChatter.OpenRouter.ApiKey` when using OpenRouter (not needed for Ollama)
 
 **2. Add bridge to docker-compose.override.yml**
 ```yaml
@@ -291,8 +319,8 @@ docker compose --profile dev up -d
 **2. Configure**
 
 Copy `conf/mod_llm_chatter.conf.dist` to your server's config directory (typically `etc/modules/`) and rename it to `mod_llm_chatter.conf`. Open it in a text editor and set at minimum:
-- `LLMChatter.Provider`,  choose `anthropic`, `openai`, or `ollama`
-- `LLMChatter.ApiKey`,  your API key from the chosen provider (not needed for Ollama)
+- `LLMChatter.Provider`,  choose `anthropic`, `openai`, `google`, `openrouter`, or `ollama`
+- the matching provider API key, for example `LLMChatter.OpenRouter.ApiKey` when using OpenRouter (not needed for Ollama)
 
 **3. Start the bridge**
 ```bash
@@ -367,7 +395,7 @@ LLMChatter.Screenshot.IntervalMaxSeconds = 120
 LLMChatter.Screenshot.Chance = 90
 
 # Which AI to use for analyzing screenshots
-# Options: "openai" (recommended) or "anthropic"
+# Options: "openai" (recommended), "anthropic", "google", or "openrouter"
 LLMChatter.Screenshot.VisionProvider = openai
 
 # Which model to use. GPT-4o-mini is fast and very cheap
@@ -383,7 +411,7 @@ LLMChatter.Screenshot.ConversationChance = 40
 LLMChatter.Screenshot.DBHost = 127.0.0.1
 ```
 
-Make sure your config also has the matching API key set (`LLMChatter.OpenAI.ApiKey` or `LLMChatter.Anthropic.ApiKey`).
+Make sure your config also has the matching API key set (`LLMChatter.OpenAI.ApiKey`, `LLMChatter.Anthropic.ApiKey`, `LLMChatter.Google.ApiKey`, or `LLMChatter.OpenRouter.ApiKey`).
 
 **4. Restart the chatter bridge**
 
@@ -509,4 +537,4 @@ GNU AGPL v3, same as AzerothCore.
 ## Credits
 
 - Uses [mod-playerbots](https://github.com/mod-playerbots/mod-playerbots) for bot characters
-- Powered by [Anthropic Claude](https://anthropic.com), [OpenAI GPT](https://openai.com), or [Ollama](https://ollama.ai)
+- Powered by [Anthropic Claude](https://anthropic.com), [OpenAI GPT](https://openai.com), [Google Gemini](https://ai.google.dev/gemini-api), [OpenRouter](https://openrouter.ai), or [Ollama](https://ollama.ai)

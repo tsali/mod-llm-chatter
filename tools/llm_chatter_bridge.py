@@ -3,8 +3,8 @@
 LLM Chatter Bridge - Generates dynamic bot
 conversations via LLM
 
-Supports Anthropic (Claude), OpenAI (GPT), and
-Ollama models.
+Supports Anthropic (Claude), OpenAI (GPT), Google
+Gemini, OpenRouter, and Ollama models.
 
 This script:
 1. Polls the database for pending chatter requests
@@ -31,9 +31,15 @@ import openai
 import chatter_ambient
 
 from chatter_constants import (
+    DEFAULT_ANTHROPIC_MODEL,
+    DEFAULT_GOOGLE_MODEL,
+    DEFAULT_OPENAI_MODEL,
+    DEFAULT_OPENROUTER_MODEL,
     MSG_TYPE_PLAIN, MSG_TYPE_QUEST,
     MSG_TYPE_LOOT, MSG_TYPE_QUEST_REWARD,
     MSG_TYPE_TRADE, MSG_TYPE_SPELL,
+    GOOGLE_OPENAI_BASE_URL,
+    OPENROUTER_BASE_URL,
 )
 from chatter_db import (
     get_group_location,
@@ -112,7 +118,7 @@ def process_conversation(
     Args:
         db: Database connection
         cursor: Database cursor
-        client: LLM client (Anthropic or OpenAI)
+        client: LLM provider client
         config: Configuration dict
         request: Queue request row
         bots: List of 2-4 bot dicts with guid, name,
@@ -1193,9 +1199,15 @@ def main():
     provider = config.get(
         'LLMChatter.Provider', 'anthropic'
     ).lower()
+    default_model = DEFAULT_ANTHROPIC_MODEL
+    if provider == 'openai':
+        default_model = DEFAULT_OPENAI_MODEL
+    elif provider == 'google':
+        default_model = DEFAULT_GOOGLE_MODEL
+    elif provider == 'openrouter':
+        default_model = DEFAULT_OPENROUTER_MODEL
     model = config.get(
-        'LLMChatter.Model',
-        'claude-haiku-4-5-20251001'
+        'LLMChatter.Model', default_model
     )
 
     if provider == 'ollama':
@@ -1221,6 +1233,46 @@ def main():
         if not api_key:
             sys.exit(1)
         client = openai.OpenAI(api_key=api_key)
+    elif provider == 'google':
+        api_key = config.get(
+            'LLMChatter.Google.ApiKey', ''
+        )
+        if not api_key:
+            sys.exit(1)
+        client = openai.OpenAI(
+            api_key=api_key,
+            base_url=config.get(
+                'LLMChatter.Google.BaseUrl',
+                GOOGLE_OPENAI_BASE_URL,
+            ),
+        )
+    elif provider == 'openrouter':
+        api_key = config.get(
+            'LLMChatter.OpenRouter.ApiKey', ''
+        )
+        if not api_key:
+            sys.exit(1)
+        headers = {}
+        referer = config.get(
+            'LLMChatter.OpenRouter.HttpReferer', ''
+        ).strip()
+        title = config.get(
+            'LLMChatter.OpenRouter.Title', ''
+        ).strip()
+        if referer:
+            headers['HTTP-Referer'] = referer
+        if title:
+            headers['X-OpenRouter-Title'] = title
+        kwargs = {
+            'api_key': api_key,
+            'base_url': config.get(
+                'LLMChatter.OpenRouter.BaseUrl',
+                OPENROUTER_BASE_URL,
+            ),
+        }
+        if headers:
+            kwargs['default_headers'] = headers
+        client = openai.OpenAI(**kwargs)
     else:
         # Anthropic (default)
         api_key = config.get(
