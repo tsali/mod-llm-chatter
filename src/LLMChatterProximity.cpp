@@ -154,6 +154,8 @@ bool IsEligibleProximityBot(
     if (bot->IsInCombat() || bot->IsMounted()
         || bot->IsFlying())
         return false;
+    if (HasUnsafeChatterFacingMotion(bot))
+        return false;
     if (bot->GetMapId() != player->GetMapId())
         return false;
     if (!player->IsWithinDistInMap(bot, radius))
@@ -177,6 +179,8 @@ bool IsEligibleProximityNPC(
         || cr->IsGuardian())
         return false;
     if (cr->IsPlayer() || cr->IsInCombat())
+        return false;
+    if (HasUnsafeChatterFacingMotion(cr))
         return false;
     if (cr->IsHostileTo(player))
         return false;

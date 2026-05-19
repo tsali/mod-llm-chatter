@@ -36,6 +36,8 @@ std::string BuildBotStateJson(Player* player);
 std::string BuildBotTravelStateJson(Player* player);
 std::string GetBotTravelContext(Player* player);
 std::string GetBotTravelMode(Player* player);
+bool HasUnsafeChatterFacingMotion(Unit* unit);
+bool IsSafeForChatterFacing(Unit* unit);
 void UpdateGroupBotTravelState(Player* player, uint32 groupId = 0);
 std::string ConvertAllLinks(const std::string& text);
 std::string GetZoneName(uint32 zoneId);

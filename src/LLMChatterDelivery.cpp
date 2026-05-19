@@ -49,7 +49,8 @@ public:
         Creature* creature = FindCreatureBySpawnId(
             player->GetMap(), _spawnId);
         if (!creature || !creature->IsAlive()
-            || creature->IsInCombat())
+            || creature->IsInCombat()
+            || !IsSafeForChatterFacing(creature))
             return true;
 
         creature->SetFacingTo(_orientation);
@@ -249,7 +250,8 @@ void DeliverPendingMessagesImpl()
             }
 
             if (sLLMChatterConfig->_facingEnable
-                && !bot->IsInCombat())
+                && !bot->IsInCombat()
+                && IsSafeForChatterFacing(bot))
             {
                 bool faced = false;
 
@@ -634,7 +636,9 @@ void DeliverPendingMessagesImpl()
         {
             float originalOrientation =
                 speaker->GetOrientation();
-            if (sLLMChatterConfig->_facingEnable)
+            bool facingApplied = false;
+            if (sLLMChatterConfig->_facingEnable
+                && IsSafeForChatterFacing(speaker))
             {
                 bool faced = false;
                 if (sequence > 0 && eventId > 0)
@@ -670,6 +674,7 @@ void DeliverPendingMessagesImpl()
                                 speaker->SetFacingToObject(
                                     prevCreature);
                                 faced = true;
+                                facingApplied = true;
                             }
                         }
                         else if (prevBotGuid)
@@ -688,14 +693,18 @@ void DeliverPendingMessagesImpl()
                                 speaker->SetFacingToObject(
                                     prevBot);
                                 faced = true;
+                                facingApplied = true;
                             }
                         }
                     }
                 }
 
                 if (!faced)
+                {
                     speaker->SetFacingToObject(
                         anchorPlayer);
+                    facingApplied = true;
+                }
             }
             std::string msayMessage =
                 ConvertAllLinks(message);
@@ -713,7 +722,8 @@ void DeliverPendingMessagesImpl()
                         anchorPlayer->GetName());
             }
 
-            if (sLLMChatterConfig
+            if (facingApplied
+                && sLLMChatterConfig
                     ->_proxChatterFacingResetDelay
                 > 0)
             {

@@ -9,11 +9,13 @@
 #include "ChannelMgr.h"
 #include "Chat.h"
 #include "Creature.h"
+#include "CreatureAI.h"
 #include "DatabaseEnv.h"
 #include "DBCStores.h"
 #include "Group.h"
 #include "Log.h"
 #include "Map.h"
+#include "MotionMaster.h"
 #include "Player.h"
 #include "Playerbots.h"
 #include "RandomPlayerbotMgr.h"
@@ -1733,6 +1735,76 @@ std::string GetBotTravelContext(Player* player)
     }
 
     return "";
+}
+
+namespace
+{
+bool IsUnsafeChatterFacingMotionType(
+    MovementGeneratorType type)
+{
+    switch (type)
+    {
+        case WAYPOINT_MOTION_TYPE:
+        case FLIGHT_MOTION_TYPE:
+        case POINT_MOTION_TYPE:
+        case ESCORT_MOTION_TYPE:
+            return true;
+        default:
+            return false;
+    }
+}
+} // namespace
+
+bool HasUnsafeChatterFacingMotion(Unit* unit)
+{
+    if (!unit || !unit->IsInWorld()
+        || unit->IsDuringRemoveFromWorld())
+        return true;
+
+    if (unit->IsInFlight()
+        || unit->IsFlying()
+        || unit->GetTransport()
+        || unit->HasUnitMovementFlag(
+            MOVEMENTFLAG_ONTRANSPORT))
+        return true;
+
+    if (Player* player = unit->ToPlayer())
+    {
+        if (player->IsBeingTeleported())
+            return true;
+    }
+
+    MotionMaster* motion = unit->GetMotionMaster();
+    if (!motion)
+        return true;
+
+    if (motion->GetMotionSlotType(MOTION_SLOT_CONTROLLED)
+        != NULL_MOTION_TYPE)
+        return true;
+
+    if (IsUnsafeChatterFacingMotionType(
+            motion->GetCurrentMovementGeneratorType())
+        || IsUnsafeChatterFacingMotionType(
+            motion->GetMotionSlotType(MOTION_SLOT_ACTIVE)))
+        return true;
+
+    if (Creature* creature = unit->ToCreature())
+    {
+        if (CreatureAI* ai = creature->AI())
+        {
+            if (ai->IsEscorted())
+                return true;
+        }
+    }
+
+    return false;
+}
+
+bool IsSafeForChatterFacing(Unit* unit)
+{
+    return unit && unit->IsAlive()
+        && unit->IsStopped()
+        && !HasUnsafeChatterFacingMotion(unit);
 }
 
 std::string BuildBotTravelStateJson(Player* player)
