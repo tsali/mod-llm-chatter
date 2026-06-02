@@ -172,7 +172,7 @@ uint32 RollConfiguredDelay(
         sLLMChatterConfig->*maxMember);
 }
 
-constexpr std::array<EventPriorityRule, 33>
+constexpr std::array<EventPriorityRule, 38>
     kTierPriorityRules = {{
         {"bot_group_combat",        PRIORITY_CRITICAL},
         {"bot_group_spell_cast",    PRIORITY_CRITICAL},
@@ -190,6 +190,8 @@ constexpr std::array<EventPriorityRule, 33>
         {"raid_boss_wipe",          PRIORITY_CRITICAL},
         {"bot_group_player_msg",    PRIORITY_HIGH_LOCAL},
         {"player_general_msg",      PRIORITY_HIGH},
+        {"guild_player_msg",        PRIORITY_HIGH},
+        {"guild_member_joined",     PRIORITY_HIGH},
         {"bot_group_death",         PRIORITY_HIGH},
         {"bot_group_wipe",          PRIORITY_HIGH},
         {"bot_group_join",          PRIORITY_HIGH},
@@ -197,7 +199,10 @@ constexpr std::array<EventPriorityRule, 33>
         {"bg_match_start",          PRIORITY_HIGH},
         {"bg_pvp_kill",             PRIORITY_HIGH},
         {"player_enters_zone",      PRIORITY_HIGH},
+        {"guild_bot_login",         PRIORITY_NORMAL},
+        {"guild_social_event",      PRIORITY_NORMAL},
         {"bg_idle_chatter",         PRIORITY_FILLER},
+        {"guild_ambient",           PRIORITY_FILLER},
         {"raid_idle_morale",        PRIORITY_FILLER},
         {"weather_ambient",         PRIORITY_FILLER},
         {"minor_event",             PRIORITY_FILLER},
@@ -216,14 +221,19 @@ constexpr std::array<PredicatePriorityRule, 1>
         {IsStateCalloutEventType, PRIORITY_CRITICAL},
     }};
 
-constexpr std::array<EventPriorityRule, 21>
+constexpr std::array<EventPriorityRule, 26>
     kLegacyPriorityRules = {{
         {"player_general_msg",       8},
+        {"guild_player_msg",         8},
+        {"guild_member_joined",      8},
         {"day_night_transition",     7},
         {"transport_arrives",        6},
         {"player_enters_zone",       6},
         {"weather_change",           5},
         {"bot_group_nearby_object",  5},
+        {"guild_bot_login",          4},
+        {"guild_social_event",       4},
+        {"guild_ambient",            1},
         {"weather_ambient",          3},
         {"bot_group_zone_transition", 3},
         {"bot_group_subzone_change", 3},
@@ -315,7 +325,7 @@ constexpr std::array<PredicateRangeDelayRule, 2>
         },
     }};
 
-constexpr std::array<ExactFixedDelayRule, 18>
+constexpr std::array<ExactFixedDelayRule, 23>
     kLegacyExactFixedDelayRules = {{
         {"bot_group_join",             &LLMChatterConfig::_reactDelayJoin},
         {
@@ -370,6 +380,26 @@ constexpr std::array<ExactFixedDelayRule, 18>
         {
             "player_general_msg",
             &LLMChatterConfig::_reactDelayGeneralMsg,
+        },
+        {
+            "guild_player_msg",
+            &LLMChatterConfig::_reactDelayGuildMsg,
+        },
+        {
+            "guild_member_joined",
+            &LLMChatterConfig::_reactDelayGuildMsg,
+        },
+        {
+            "guild_bot_login",
+            &LLMChatterConfig::_reactDelayGuildMsg,
+        },
+        {
+            "guild_social_event",
+            &LLMChatterConfig::_reactDelayGuildMsg,
+        },
+        {
+            "guild_ambient",
+            &LLMChatterConfig::_reactDelayGuildMsg,
         },
     }};
 

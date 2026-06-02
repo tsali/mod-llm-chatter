@@ -59,7 +59,7 @@ not just `docker restart`.
 3. Python generates messages and writes them to
    `llm_chatter_messages`.
 4. C++ world tick delivers messages in game.
-5. Party-channel delivery may play text emotes; General/Raid/BG
+5. Party-channel delivery may play text emotes; General/Raid/BG/Guild
    delivery does not.
 
 ### Screenshot vision data flow
@@ -344,7 +344,7 @@ Session 69 added two scheduling controls around that model:
 | `src/LLMChatterScript.cpp` | 17 | Registration coordinator only |
 | `src/LLMChatterShared.cpp` | 1939 | Shared helpers: SQL/JSON escaping, canonical shared lookup helpers (`GetZoneName()`, `GetChatterClassName()`, `GetRaceName()`), `BuildBotIdentityFields()` (emits `bot_gender` / `player_gender`) / `BuildBotStateJson()`, queue insert helper, shared event cooldown helper, table-driven event priority/reaction-delay registries, link/emote/delivery helpers, `GetTextEmoteName()` reverse lookup, `SendUnitTextEmote()` consolidated emote packet helper, cross-domain formatting helpers, General-channel membership check helper, `FindCreatureBySpawnId()` spawn-GUID creature lookup, `GetCreatureRoleName()` NPC role description helper |
 | `src/LLMChatterShared.h` | 83 | Shared declarations still used across domains; `class Unit` forward-declared for `SendUnitTextEmote()`; currently also declares world/player registration |
-| `src/LLMChatterDelivery.cpp` | ~500 | Outbound message delivery implementation: DB polling, facing selection, party/raid/BG/General/yell/say/msay dispatch, spawn-GUID creature lookup for NPC delivery, NPC orientation reset via BasicEvent, sequence-based facing for multi-speaker proximity scenes, post-send delivery state updates |
+| `src/LLMChatterDelivery.cpp` | ~500 | Outbound message delivery implementation: DB polling, facing selection, party/raid/BG/Guild/General/yell/say/msay dispatch, spawn-GUID creature lookup for NPC delivery, NPC orientation reset via BasicEvent, sequence-based facing for multi-speaker proximity scenes, post-send delivery state updates |
 | `src/LLMChatterDelivery.h` | 4 | Narrow delivery extraction declaration used by `LLMChatterWorld.cpp` |
 | `src/LLMChatterAmbient.cpp` | 963 | Ambient world/event ownership: day/night transitions, holiday start/stop routing, weather state tracking, weather reactions, zone-level ambient chatter selection, ambient request queue writes |
 | `src/LLMChatterAmbient.h` | 24 | Narrow ambient declarations consumed by `LLMChatterWorld.cpp` |
@@ -358,6 +358,8 @@ Session 69 added two scheduling controls around that model:
 | `src/LLMChatterGroupEmote.cpp` | 534 | Emote reaction system: `DelayedMirrorEmoteEvent`, `DelayedCreatureMirrorEmoteEvent`, emote static data (mirror map, denylist, combat callouts, contagious set), `HandleEmoteAtGroupBot()`, `HandleEmoteAtCreature()`, `HandleEmoteObserver()`, `EvictEmoteCooldowns()` |
 | `src/LLMChatterGroupQuest.cpp` | 530 | Quest accept batching: `FlushQuestAcceptBatches()`, `LLMChatterCreatureScript` (AllCreatureScript: `CanCreatureQuestAccept` with debounce/immediate paths) |
 | `src/LLMChatterGroup.h` | 18 | World-to-group cross-call surface plus group registration |
+| `src/LLMChatterGuild.cpp` | ~1000 | Guild chat hooks and event producers: real player guild chat, guild bot join/login greetings, ambient guild checks, MOTD/info/rank/bank events, bot level/achievement guild echoes. C++ queues events only; Python owns guild history writes |
+| `src/LLMChatterGuild.h` | 5 | Guild script registration declaration |
 | `src/LLMChatterPlayer.cpp` | 1105 | Player General-channel hooks, General cooldowns, subzone cooldowns, `EnsureBotInGeneralChannel()`, player registration |
 | `src/LLMChatterRaid.cpp` | 767 | Raid boss hooks (pull/kill/wipe), boss lookup table (80+ entries across Classic/TBC/WotLK), `IsDatabaseBound() override`, raid registration |
 | `src/LLMChatterProximity.cpp` | ~800 | Proximity chatter: periodic scan around real players, NPC/bot eligibility filtering, candidate scoring, `proximity_say`/`proximity_conversation` event queueing, `ProximityScene` tracking for player reply detection, entity cooldown management |
@@ -379,6 +381,7 @@ Session 69 added two scheduling controls around that model:
 - `AddLLMChatterWorldScripts()`
 - `AddLLMChatterGroupScripts()`
 - `AddLLMChatterPlayerScripts()`
+- `AddLLMChatterGuildScripts()`
 - `AddLLMChatterBGScripts()`
 - `AddLLMChatterRaidScripts()`
 - `AddLLMChatterCommandScripts()`
@@ -390,6 +393,7 @@ uniform:
   `AddLLMChatterWorldScripts()` and `AddLLMChatterPlayerScripts()`
 - `LLMChatterGroup.h` declares `AddLLMChatterGroupScripts()` plus the
   explicit world-to-group cross-call surface
+- `LLMChatterGuild.h` declares `AddLLMChatterGuildScripts()`
 - `LLMChatterBG.h` declares BG registration
 
 This asymmetry is known and acceptable in the shipped source state.
@@ -426,6 +430,10 @@ This asymmetry is known and acceptable in the shipped source state.
 | `tools/chatter_links.py` | WoW link parsing and prompt-side link enrichment for player messages |
 | `tools/chatter_prompts.py` | Ambient/event prompt builders |
 | `tools/chatter_general.py` | `player_general_msg` Python path |
+| `tools/chatter_guild.py` | Guild chat event handlers and single writer for `llm_guild_chat_history` |
+| `tools/chatter_guild_pacing.py` | Guild join-burst delivery-slot reservations through `llm_guild_chat_pacing` |
+| `tools/chatter_guild_prompts.py` | Guild prompt builders |
+| `tools/chatter_guild_topics.py` | Guild topic pool and event-topic mapping |
 | `tools/chatter_memory.py` | Persistent memory system: session tracking, background memory generation via `queue_memory()`, flush/activate on farewell, orphan recovery. Key helpers: `_resolve_location()`, `_ensure_cap_and_insert()`, `_count_active_memories()`, `_evict_one_used()`. Memory prompts thread `player_name` so the LLM references the player by name (DB fallback from `player_guid` when caller doesn't supply it) |
 | `tools/chatter_cache.py` | Pre-cache refill |
 | `tools/chatter_events.py` | Event context building and cleanup |
@@ -515,7 +523,7 @@ system.
 - `DeliverPendingMessagesImpl()`
 - outbound message polling from `llm_chatter_messages`
 - facing selection before speech delivery
-- final chat-channel dispatch for party, raid, BG, yell, General,
+- final chat-channel dispatch for party, raid, BG, Guild, yell, General,
   say (bot `CHAT_MSG_SAY`), and msay (NPC `CHAT_MSG_MONSTER_SAY`
   with speech bubbles)
 - spawn-GUID creature lookup for NPC delivery via
@@ -647,6 +655,94 @@ Ownership boundary:
 
 Important: the creature quest-accept hook is group-owned, not in a
 separate creature file.
+
+### Guild ownership
+
+`LLMChatterGuild.cpp` owns guild-domain C++ hooks:
+
+- `OnPlayerCanUseChat(..., Guild*)` for real player guild chat
+- `GuildScript` hooks for bot join greetings and guild social events
+- bot login, real-player login greetings, level-up, and achievement
+  guild echoes
+- ambient guild chat checks via a guild-owned `WorldScript`
+- guild event queue insertion only
+
+The guild chat `Can` hook must always return `true` after queueing so
+real player guild messages are not suppressed. C++ does not write to
+`llm_guild_chat_history`; Python is the sole writer for that table.
+
+Python guild handling lives in:
+
+- `chatter_guild.py`
+- `chatter_guild_prompts.py`
+- `chatter_guild_topics.py`
+
+`chatter_guild.py` selects online guildmate speakers for either a
+single guild statement or a short guild exchange. Prompt context
+includes selected online guildmates and selected guildmate speakers with
+race/class/level/rank/location, stored identity traits, tone, and
+backstory. Non-speaking guildmates are context/audience only; generated
+guild lines are authored only for selected speakers.
+The Python guild-bot roster filters out bots whose guild rank lacks the
+guild-chat speak right, matching the C++ `SayToGuild()` guard.
+
+Guild join/welcome messages reserve visible delivery slots through
+`chatter_guild_pacing.py` and `llm_guild_chat_pacing`. This prevents
+charter registration or guild creation from scheduling all newly added
+bot greetings at the same few-second delays. The pacing helper only
+applies to `delivery_policy = 'join_burst'`; direct player-message
+replies and ordinary ambient/social guild events keep their normal
+responsiveness.
+
+When player-message or ambient guild events become multi-bot
+conversations, the first line keeps normal responsive timing and each
+follow-up line is spaced by
+`GuildChat.ConversationMinGapSeconds` to
+`GuildChat.ConversationMaxGapSeconds`.
+
+When a real guild member logs in and online guild bots are already
+present, C++ queues a `guild_social_event` with
+`event_kind = member_online`. Python selects
+`GuildChat.PlayerLoginGreetingMin` to
+`GuildChat.PlayerLoginGreetingMax` eligible guild bots and generates
+separate in-character greetings. These greetings use the same guild
+delivery path and the same guild-rank speak-right filter as ordinary
+guild bot messages.
+
+Guild prompts are non-coordinating: they may ask for advice or mention
+goals/stories, but must not offer, request, or imply invites, grouping,
+queueing, summons, portals, runs, carries, meet-ups, or other activity
+that guild chat cannot cause the bot AI to perform.
+
+Guild prompt wording is RP-first. In roleplay mode, generated guild
+messages must stay fully in character and avoid meta terms such as bots,
+players, AI, prompts, addons, game client, UI, server, or roleplay mode.
+The prompt mirrors the General-channel RP enrichment style by including
+race/class cultural context, race flavor vocabulary, current tone,
+current mood, a possible scene angle, time/season/weather context, and
+the speaker's own zone flavor. In guild chat, zone flavor always belongs
+to the speaking bot's current location; player/guildmate locations are
+only comparison context for same-location wording. Location is optional
+prompt context, not a required line subject; the prompt rotates line
+focus so guild messages vary between player-message replies, class/race
+voice, guild identity, practical advice, quests, memories, mood, and
+occasional location flavor. Explicit place/topic prompts always receive
+location context; otherwise guild prompt builders inject speaking-bot
+location context by RNG at roughly 5%. The non-roleplay guild path is
+intentionally not optimized.
+
+Guild MOTD is also sparse prompt context. Explicit MOTD-change events
+and bot-login MOTD focus can include it, while ordinary guild prompts
+include MOTD context only through `GuildChat.MotdContextChance` and
+otherwise explicitly forbid mentioning the message of the day.
+
+Guild prompts also randomize line shape so generated messages do not
+all land in the same polished length band. `GuildChat.ShortLineChance`
+controls how often the prompt asks for a very short casual guild line;
+the remaining lines are split between medium and fuller RP messages.
+
+Guild memory recall may use `get_bot_memories(..., mark_used=False)`
+so reminiscing in guild chat does not consume party-memory state.
 
 ### Player ownership
 
@@ -792,6 +888,7 @@ source:
 | Group message insert behavior / preserve `emote: null` | `tools/chatter_group.py`, `tools/chatter_shared.py`, `tools/chatter_cache.py` |
 | General-channel Python behavior | `tools/chatter_general.py` |
 | General-to-party relay behavior | `tools/chatter_group_general_reaction.py` |
+| Guild-channel Python behavior | `tools/chatter_guild.py`, `tools/chatter_guild_prompts.py`, `tools/chatter_guild_topics.py` |
 | DB inserts, history tables, zone/query cache behavior | `tools/chatter_db.py` |
 | Shared parsing/sanitization | `tools/chatter_text.py` |
 | Provider/model calls | `tools/chatter_llm.py` |
@@ -815,6 +912,7 @@ source:
 | C++ world transport/dispatcher logic | `src/LLMChatterWorld.cpp` |
 | C++ group batching/combat/state logic | `src/LLMChatterGroup.cpp`, `src/LLMChatterGroupCombat.cpp`, `src/LLMChatterGroupJoin.cpp`, `src/LLMChatterGroupEmote.cpp`, `src/LLMChatterGroupQuest.cpp`, `src/LLMChatterGroup.h`, `src/LLMChatterGroupInternal.h` |
 | C++ General-channel player logic | `src/LLMChatterPlayer.cpp` |
+| C++ Guild-channel hooks | `src/LLMChatterGuild.cpp`, `src/LLMChatterGuild.h` |
 | C++ BG logic | `src/LLMChatterBG.cpp`, `src/LLMChatterBG.h` |
 | Screenshot vision capture agent (host-side) | `tools/screenshot_agent.py` |
 | Screenshot vision bridge handler | `tools/chatter_screenshot_handler.py` |
@@ -865,6 +963,7 @@ Any new C++ hook override must add the correct enum to its constructor's
   `LLMChatterGroupCombat.cpp`, `LLMChatterGroupJoin.cpp`,
   `LLMChatterGroupEmote.cpp`, `LLMChatterGroupQuest.cpp`
 - player General-channel logic lives in `LLMChatterPlayer.cpp`
+- guild-channel logic lives in `LLMChatterGuild.cpp`
 - shared helpers live in `LLMChatterShared.cpp`
 
 Do not edit `LLMChatterScript.cpp` for new features.
@@ -892,6 +991,8 @@ This reduces duplicate near-identical lines across party and raid.
 | `llm_group_bot_traits` | Python + C++ travel refresh | Python | Group traits/state, location, and live travel context |
 | `llm_group_chat_history` | Python | Python | Group anti-repetition history |
 | `llm_general_chat_history` | C++/Python read path | Python/C++ | General-channel history |
+| `llm_guild_chat_history` | Python | Python | Guild-channel history |
+| `llm_guild_chat_pacing` | Python | Python | Per-guild join-burst delivery pacing reservations |
 
 ## Known Gaps
 
@@ -899,3 +1000,6 @@ This reduces duplicate near-identical lines across party and raid.
 - hostile multi-target spell-attribution edge case not yet fully covered
 - boss pull/kill/wipe events need live in-game testing via actual boss
   encounters
+- guild roster SQL identifies random bots by RNDBOT account naming;
+  account-bound playerbot alts are not fully classified as guild bot
+  speakers until a runtime-visible bot roster source is added

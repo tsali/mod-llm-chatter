@@ -7,6 +7,7 @@ from typing import Dict, List, Optional, Tuple
 
 import mysql.connector
 
+from chatter_guild_pacing import reserve_guild_slot
 from chatter_party_gate import reserve_party_slot
 from chatter_constants import (
     CAPITAL_CITY_ZONES,
@@ -638,6 +639,214 @@ def query_zone_bot_gossip_targets(
     return targets
 
 
+def query_online_guild_bots(
+    cursor, guild_id: int, exclude_guids=None, limit: int = 20
+) -> List[dict]:
+    """Return online random bots in a guild."""
+    if not guild_id:
+        return []
+
+    exclude_guids = {
+        int(g) for g in (exclude_guids or []) if g
+    }
+    cursor.execute("""
+        SELECT DISTINCT
+            c.guid, c.name, c.class, c.race,
+            c.level, c.gender, c.zone, c.map,
+            gm.rank, gr.rname, gr.rights
+        FROM guild_member gm
+        JOIN characters c
+            ON c.guid = gm.guid
+        JOIN acore_auth.account a
+            ON c.account = a.id
+        LEFT JOIN guild_rank gr
+            ON gr.guildid = gm.guildid
+           AND gr.rid = gm.rank
+        WHERE gm.guildid = %s
+          AND c.online = 1
+          AND a.username LIKE 'RNDBOT%%%%'
+          AND (COALESCE(gr.rights, 0) & 2) <> 0
+        ORDER BY RAND()
+        LIMIT %s
+    """, (guild_id, limit))
+
+    bots = []
+    for row in cursor.fetchall():
+        guid = int(row.get('guid') or 0)
+        if guid in exclude_guids:
+            continue
+        class_id = int(row.get('class') or 0)
+        race_id = int(row.get('race') or 0)
+        bots.append({
+            'guid': guid,
+            'name': row.get('name') or 'Unknown bot',
+            'class_id': class_id,
+            'race_id': race_id,
+            'class': CLASS_NAMES.get(
+                class_id, 'Adventurer'
+            ),
+            'race': RACE_NAMES.get(
+                race_id, 'Unknown'
+            ),
+            'level': int(row.get('level') or 0),
+            'gender': int(row.get('gender') or 0),
+            'zone_id': int(row.get('zone') or 0),
+            'map_id': int(row.get('map') or 0),
+            'rank_id': int(row.get('rank') or 0),
+            'rank_name': row.get('rname') or '',
+            'rank_rights': int(row.get('rights') or 0),
+        })
+    return bots
+
+
+def query_online_guild_players(
+    cursor, guild_id: int, exclude_guids=None, limit: int = 20
+) -> List[dict]:
+    """Return online real players in a guild."""
+    if not guild_id:
+        return []
+
+    exclude_guids = {
+        int(g) for g in (exclude_guids or []) if g
+    }
+    cursor.execute("""
+        SELECT DISTINCT
+            c.guid, c.name, c.class, c.race,
+            c.level, c.gender, c.zone, c.map,
+            gm.rank, gr.rname
+        FROM guild_member gm
+        JOIN characters c
+            ON c.guid = gm.guid
+        JOIN acore_auth.account a
+            ON c.account = a.id
+        LEFT JOIN guild_rank gr
+            ON gr.guildid = gm.guildid
+           AND gr.rid = gm.rank
+        WHERE gm.guildid = %s
+          AND c.online = 1
+          AND a.username NOT LIKE 'RNDBOT%%%%'
+        ORDER BY c.name ASC
+        LIMIT %s
+    """, (guild_id, limit))
+
+    players = []
+    for row in cursor.fetchall():
+        guid = int(row.get('guid') or 0)
+        if guid in exclude_guids:
+            continue
+        players.append({
+            'guid': guid,
+            'name': row.get('name') or 'Unknown',
+            'class_id': int(row.get('class') or 0),
+            'race_id': int(row.get('race') or 0),
+            'level': int(row.get('level') or 0),
+            'gender': int(row.get('gender') or 0),
+            'zone_id': int(row.get('zone') or 0),
+            'map_id': int(row.get('map') or 0),
+            'rank_id': int(row.get('rank') or 0),
+            'rank_name': row.get('rname') or '',
+        })
+    return players
+
+
+def get_guild_info(db, guild_id: int) -> Optional[dict]:
+    """Return basic guild metadata."""
+    if not guild_id:
+        return None
+    cursor = db.cursor(dictionary=True)
+    cursor.execute("""
+        SELECT guildid, name, motd, info, createdate
+        FROM guild
+        WHERE guildid = %s
+        LIMIT 1
+    """, (guild_id,))
+    return cursor.fetchone()
+
+
+def get_bot_active_quests(
+    db, bot_guid: int, limit: int = 3
+) -> List[dict]:
+    """Return active or ready-to-turn-in quests for a bot."""
+    if not bot_guid:
+        return []
+    cursor = db.cursor(dictionary=True)
+    cursor.execute("""
+        SELECT
+            qs.quest as quest_id,
+            qs.status,
+            qt.LogTitle as quest_name,
+            LEFT(qt.LogDescription, 180) as description,
+            LEFT(qt.QuestDescription, 180) as details,
+            LEFT(qt.AreaDescription, 120) as area_description
+        FROM character_queststatus qs
+        JOIN acore_world.quest_template qt
+            ON qt.ID = qs.quest
+        WHERE qs.guid = %s
+          AND qs.status IN (1, 3)
+          AND qt.LogTitle IS NOT NULL
+          AND qt.LogTitle != ''
+          AND qt.LogTitle NOT LIKE '<%%'
+        ORDER BY RAND()
+        LIMIT %s
+    """, (bot_guid, limit))
+    return cursor.fetchall()
+
+
+def get_guild_chat_history(
+    db, guild_id: int, limit: int = 20
+) -> List[dict]:
+    """Return recent guild chat history oldest-first."""
+    cursor = db.cursor(dictionary=True)
+    cursor.execute("""
+        SELECT
+            speaker_guid, speaker_name, is_bot,
+            message, event_type, topic_category
+        FROM llm_guild_chat_history
+        WHERE guild_id = %s
+        ORDER BY id DESC
+        LIMIT %s
+    """, (guild_id, limit))
+    rows = cursor.fetchall()
+    return list(reversed(rows))
+
+
+def store_guild_chat(
+    db, guild_id: int, speaker_name: str,
+    is_bot: bool, message: str,
+    speaker_guid: int = None,
+    event_type: str = None,
+    topic_category: str = None,
+    history_limit: int = 20,
+):
+    """Store and prune guild chat history."""
+    cursor = db.cursor()
+    cursor.execute("""
+        INSERT INTO llm_guild_chat_history
+        (guild_id, speaker_guid, speaker_name, is_bot,
+         message, event_type, topic_category)
+        VALUES (%s, %s, %s, %s, %s, %s, %s)
+    """, (
+        guild_id, speaker_guid, speaker_name,
+        1 if is_bot else 0, (message or '')[:255],
+        event_type, topic_category,
+    ))
+    db.commit()
+
+    cursor.execute("""
+        DELETE FROM llm_guild_chat_history
+        WHERE guild_id = %s AND id NOT IN (
+            SELECT id FROM (
+                SELECT id
+                FROM llm_guild_chat_history
+                WHERE guild_id = %s
+                ORDER BY id DESC
+                LIMIT %s
+            ) AS keep
+        )
+    """, (guild_id, guild_id, history_limit))
+    db.commit()
+
+
 def query_bot_spells(
     config: dict,
     class_name: str,
@@ -735,6 +944,7 @@ def insert_chat_message(
     player_guid: int = None,
     config: dict = None,
     group_id: int = None,
+    guild_id: int = None,
     delivery_policy: str = None,
     delivery_reason: str = None,
 ):
@@ -754,6 +964,19 @@ def insert_chat_message(
             db,
             config,
             group_id,
+            delay_seconds,
+            delivery_policy,
+            delivery_reason,
+        )
+    elif (
+        config is not None
+        and channel == 'guild'
+        and guild_id
+    ):
+        final_delay = reserve_guild_slot(
+            db,
+            config,
+            guild_id,
             delay_seconds,
             delivery_policy,
             delivery_reason,
