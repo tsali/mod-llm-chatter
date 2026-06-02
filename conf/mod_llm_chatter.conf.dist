@@ -913,10 +913,26 @@ LLMChatter.GroupChatter.LootChanceGreen = 20
 #   LLMChatter.GroupChatter.LootChanceBlue
 #       Percent chance (0-100) that looting a blue
 #       quality item triggers a group reaction.
-#       Epic+ loot always triggers (100%).
 #       Default: 60
 #
 LLMChatter.GroupChatter.LootChanceBlue = 60
+
+#
+#   LLMChatter.GroupChatter.LootChancePurple
+#       Percent chance (0-100) that looting a purple
+#       quality item triggers a group reaction.
+#       Default: 100
+#
+LLMChatter.GroupChatter.LootChancePurple = 100
+
+#
+#   LLMChatter.GroupChatter.LootChanceOrange
+#       Percent chance (0-100) that looting an orange
+#       quality item triggers a group reaction.
+#       Artifact and heirloom loot always trigger (100%).
+#       Default: 100
+#
+LLMChatter.GroupChatter.LootChanceOrange = 100
 
 #
 #   LLMChatter.GroupChatter.LootCooldown

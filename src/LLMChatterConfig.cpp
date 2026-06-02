@@ -175,7 +175,15 @@ void LLMChatterConfig::LoadConfig()
     _groupKillChanceNormal = GetChatterOption<uint32>("LLMChatter.GroupChatter.KillChanceNormal", 20);
     _groupDeathChance = GetChatterOption<uint32>("LLMChatter.GroupChatter.DeathChance", 40);
     _groupLootChanceGreen = GetChatterOption<uint32>("LLMChatter.GroupChatter.LootChanceGreen", 20);
-    _groupLootChanceBlue = GetChatterOption<uint32>("LLMChatter.GroupChatter.LootChanceBlue", 50);
+    _groupLootChanceBlue = GetChatterOption<uint32>("LLMChatter.GroupChatter.LootChanceBlue", 60);
+    _groupLootChancePurple =
+        GetChatterOption<uint32>(
+            "LLMChatter.GroupChatter."
+            "LootChancePurple", 100);
+    _groupLootChanceOrange =
+        GetChatterOption<uint32>(
+            "LLMChatter.GroupChatter."
+            "LootChanceOrange", 100);
     _groupQuestObjectiveChance = GetChatterOption<uint32>("LLMChatter.GroupChatter.QuestObjectiveChance", 100);
     _groupQuestCompleteChance = GetChatterOption<uint32>("LLMChatter.GroupChatter.QuestCompleteChance", 100);
     _groupQuestObjectiveCooldown = GetChatterOption<uint32>("LLMChatter.GroupChatter.QuestObjectiveCooldown", 30);

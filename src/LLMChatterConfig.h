@@ -98,6 +98,8 @@ public:
     uint32 _groupDeathChance;
     uint32 _groupLootChanceGreen;
     uint32 _groupLootChanceBlue;
+    uint32 _groupLootChancePurple;
+    uint32 _groupLootChanceOrange;
     uint32 _groupQuestObjectiveChance;
     uint32 _groupQuestCompleteChance;
     uint32 _groupQuestObjectiveCooldown;

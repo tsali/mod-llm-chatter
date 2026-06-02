@@ -528,6 +528,12 @@ void HandleGroupLootEventImpl(
     else if (quality == 3)
         chance = sLLMChatterConfig
             ->_groupLootChanceBlue;
+    else if (quality == 4)
+        chance = sLLMChatterConfig
+            ->_groupLootChancePurple;
+    else if (quality == 5)
+        chance = sLLMChatterConfig
+            ->_groupLootChanceOrange;
     else
         chance = 100;
 

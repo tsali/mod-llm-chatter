@@ -1538,7 +1538,11 @@ def main():
         f"  LootChanceGreen: "
         f"{config.get('LLMChatter.GroupChatter.LootChanceGreen', 20)}%"
         f"  LootChanceBlue: "
-        f"{config.get('LLMChatter.GroupChatter.LootChanceBlue', 50)}%"
+        f"{config.get('LLMChatter.GroupChatter.LootChanceBlue', 60)}%"
+        f"  LootChancePurple: "
+        f"{config.get('LLMChatter.GroupChatter.LootChancePurple', 100)}%"
+        f"  LootChanceOrange: "
+        f"{config.get('LLMChatter.GroupChatter.LootChanceOrange', 100)}%"
     )
     logger.info(
         f"  SpellCastChance: "
