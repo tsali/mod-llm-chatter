@@ -404,16 +404,19 @@ LLMChatter.ChatterMode = roleplay
 #       Accepted values:
 #           GB / US - English (default, no extra instruction)
 #           FR      - French
+#           DE      - German
+#           ES      - Spanish
+#           PT      - Portuguese
+#           RU      - Russian
 #       Adding a new language:
 #           Edit modules/mod-llm-chatter/tools/chatter_shared.py
 #           and add an entry to the _LANGUAGE_LABELS dict
 #           (search for "_LANGUAGE_LABELS"). The key is the
 #           code used here; the value is the English name
 #           injected into the LLM prompt. Examples:
-#               "DE": "German"
-#               "ES": "Spanish"
-#               "RU": "Russian"
-#               "PT": "Portuguese"
+#               "IT": "Italian"
+#               "NL": "Dutch"
+#               "PL": "Polish"
 #           No other code changes needed — the prompt
 #           pipeline is language-agnostic. After adding the
 #           code, you may also want to bump

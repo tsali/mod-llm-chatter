@@ -46,6 +46,24 @@ Built from the ground up for **fantasy roleplay immersion**. Every system, perso
 
 ## Changelog
 
+### 2026-06-02 - Language Configuration Reliability
+
+* **German and Common Language Codes**: `LLMChatter.Language` now ships
+  built-in support for `DE`, `ES`, `PT`, and `RU` in addition to
+  English and French. German no longer requires manually editing the
+  Python language map.
+* **Unknown Language Warnings**: The bridge now logs the configured and
+  resolved language at startup, and warns when an unknown language code
+  falls back to English.
+* **More Complete Language Prompting**: Group farewell generation and
+  ambient JSON repair retries now preserve the configured language rule
+  instead of falling back to plain English repair prompts.
+* **Localized Action Narration**: Conversation action prompts no longer
+  include an English action example for the model to copy. The prompt
+  now asks for short physical narration in the configured language.
+* **No Database Migration**: This update is Python/config-template only.
+  Restart the chatter bridge after changing `LLMChatter.Language`.
+
 ### 2026-05-19 - Google Gemini and OpenRouter Provider Support
 
 * **Google Gemini Support**: Chatter can now use Google's

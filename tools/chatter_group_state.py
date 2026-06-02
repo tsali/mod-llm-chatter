@@ -1358,6 +1358,10 @@ def _generate_farewell(
         f"- No quotes, no emojis\n"
         f"- Just the farewell text, nothing else"
     )
+    from chatter_shared import get_language_rule
+    lang_rule = get_language_rule()
+    if lang_rule:
+        prompt += lang_rule
 
     try:
         response = call_llm(
