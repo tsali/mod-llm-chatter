@@ -77,6 +77,9 @@ from chatter_general import (
     init_general_config,
     process_general_player_msg_event,
 )
+from chatter_guild import (
+    init_guild_config,
+)
 from chatter_cache import refill_precache_pool
 from chatter_event_registry import (
     build_handler_map,
@@ -353,6 +356,7 @@ def fetch_pending_events(db, config, max_count):
               OR e.event_type LIKE 'bot_group%%'
               OR e.event_type LIKE 'bg_%%'
               OR e.event_type LIKE 'raid_%%'
+              OR e.event_type LIKE 'guild_%%'
               OR e.event_type = 'player_general_msg'
               OR e.event_type = 'player_enters_zone'
               OR e.event_type LIKE 'proximity_%%'
@@ -489,6 +493,11 @@ EVENT_LOG_OVERRIDES = {
     'raid_boss_kill': 'Raid event',
     'raid_boss_wipe': 'Raid event',
     'raid_idle_morale': 'Raid event',
+    'guild_player_msg': 'Guild chat event',
+    'guild_member_joined': 'Guild join event',
+    'guild_bot_login': 'Guild login event',
+    'guild_social_event': 'Guild social event',
+    'guild_ambient': 'Guild ambient event',
 }
 
 
@@ -674,6 +683,31 @@ def _event_summary(event):
                     str(n) for n in names[:4]
                 )),
             ]
+    elif et == 'guild_player_msg':
+        pmsg = ed.get('player_message', '')
+        if isinstance(pmsg, str) and len(pmsg) > 40:
+            pmsg = pmsg[:40] + '...'
+        parts = [
+            ('guild', ed.get('guild_name', '')),
+            ('player', ed.get('player_name', subj)),
+            ('msg', pmsg),
+        ]
+    elif et in (
+        'guild_member_joined',
+        'guild_bot_login',
+    ):
+        parts = [
+            ('guild', ed.get('guild_name', '')),
+            ('bot', ed.get('bot_name', subj)),
+        ]
+    elif et in (
+        'guild_social_event',
+        'guild_ambient',
+    ):
+        parts = [
+            ('guild', ed.get('guild_name', '')),
+            ('kind', ed.get('event_kind', 'ambient')),
+        ]
 
     # Filter out empty values and build string
     filled = [
@@ -1177,6 +1211,7 @@ def main():
     ))
     init_group_config(config)
     init_general_config(config)
+    init_guild_config(config)
 
     # Initialize request logger (no-op if disabled)
     from chatter_request_logger import (
@@ -1409,6 +1444,8 @@ def main():
         f"{config.get('LLMChatter.GroupChatter.Enable', 1)}"
         f"  GeneralChat: "
         f"{config.get('LLMChatter.GeneralChat.Enable', 1)}"
+        f"  GuildChat: "
+        f"{config.get('LLMChatter.GuildChat.Enable', 0)}"
         f"  BGChatter: "
         f"{config.get('LLMChatter.BGChatter.Enable', 1)}"
         f"  RaidChatter: "
@@ -1524,6 +1561,43 @@ def main():
         f"{config.get('LLMChatter.GeneralChat.QuestionChance', 80)}%"
         f"  Cooldown: "
         f"{config.get('LLMChatter.GeneralChat.Cooldown', 30)}s"
+    )
+    logger.info("-" * 60)
+    logger.info("Guild chat:")
+    logger.info(
+        f"  TriggerChance: "
+        f"{config.get('LLMChatter.GuildChat.TriggerChance', config.get('LLMChatter.GuildChat.PlayerMessageChance', 85))}%"
+        f"  PlayerMessageCooldown: "
+        f"{config.get('LLMChatter.GuildChat.PlayerMessageCooldown', 45)}s"
+    )
+    logger.info(
+        f"  TriggerIntervalSeconds: "
+        f"{config.get('LLMChatter.GuildChat.TriggerIntervalSeconds', config.get('LLMChatter.GuildChat.AmbientIntervalSeconds', 120))}s"
+        f"  AmbientChance: "
+        f"{config.get('LLMChatter.GuildChat.AmbientChance', 25)}%"
+        f"  AmbientCooldown: "
+        f"{config.get('LLMChatter.GuildChat.AmbientCooldown', 240)}s"
+    )
+    logger.info(
+        f"  ConversationChance: "
+        f"{config.get('LLMChatter.GuildChat.ConversationChance', 20)}%"
+        f"  ConversationGap: "
+        f"{config.get('LLMChatter.GuildChat.ConversationMinGapSeconds', 12)}-"
+        f"{config.get('LLMChatter.GuildChat.ConversationMaxGapSeconds', 22)}s"
+    )
+    logger.info(
+        f"  JoinBurstGap: "
+        f"{config.get('LLMChatter.GuildChat.JoinBurstMinGapSeconds', 10)}-"
+        f"{config.get('LLMChatter.GuildChat.JoinBurstMaxGapSeconds', 18)}s"
+        f"  PlayerLoginGreetings: "
+        f"{config.get('LLMChatter.GuildChat.PlayerLoginGreetingMin', 1)}-"
+        f"{config.get('LLMChatter.GuildChat.PlayerLoginGreetingMax', 3)}"
+    )
+    logger.info(
+        f"  MotdContextChance: "
+        f"{config.get('LLMChatter.GuildChat.MotdContextChance', 2)}%"
+        f"  ShortLineChance: "
+        f"{config.get('LLMChatter.GuildChat.ShortLineChance', 60)}%"
     )
     logger.info("-" * 60)
     logger.info("Raid chatter:")
