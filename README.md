@@ -46,6 +46,19 @@ Built from the ground up for **fantasy roleplay immersion**. Every system, perso
 
 ## Changelog
 
+### 2026-06-02 - Loot Reaction Chance Configuration
+
+* **Configurable Epic and Legendary Loot Reactions**:
+  `LLMChatter.GroupChatter.LootChancePurple` and
+  `LLMChatter.GroupChatter.LootChanceOrange` now control party loot
+  reaction chances for purple and orange items instead of treating both
+  as hardcoded 100% triggers.
+* **Quality-Specific Loot Gates**: Group loot reactions now use separate
+  configured chances for green, blue, purple, and orange item quality.
+  Artifact and heirloom quality loot still always triggers.
+* **Config Visibility**: The chatter bridge startup summary now prints
+  the purple and orange loot chance values alongside green and blue.
+
 ### 2026-06-02 - Language Configuration Reliability
 
 * **German and Common Language Codes**: `LLMChatter.Language` now ships

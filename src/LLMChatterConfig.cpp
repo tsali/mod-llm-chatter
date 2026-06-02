@@ -175,7 +175,15 @@ void LLMChatterConfig::LoadConfig()
     _groupKillChanceNormal = GetChatterOption<uint32>("LLMChatter.GroupChatter.KillChanceNormal", 20);
     _groupDeathChance = GetChatterOption<uint32>("LLMChatter.GroupChatter.DeathChance", 40);
     _groupLootChanceGreen = GetChatterOption<uint32>("LLMChatter.GroupChatter.LootChanceGreen", 20);
-    _groupLootChanceBlue = GetChatterOption<uint32>("LLMChatter.GroupChatter.LootChanceBlue", 50);
+    _groupLootChanceBlue = GetChatterOption<uint32>("LLMChatter.GroupChatter.LootChanceBlue", 60);
+    _groupLootChancePurple =
+        GetChatterOption<uint32>(
+            "LLMChatter.GroupChatter."
+            "LootChancePurple", 100);
+    _groupLootChanceOrange =
+        GetChatterOption<uint32>(
+            "LLMChatter.GroupChatter."
+            "LootChanceOrange", 100);
     _groupQuestObjectiveChance = GetChatterOption<uint32>("LLMChatter.GroupChatter.QuestObjectiveChance", 100);
     _groupQuestCompleteChance = GetChatterOption<uint32>("LLMChatter.GroupChatter.QuestCompleteChance", 100);
     _groupQuestObjectiveCooldown = GetChatterOption<uint32>("LLMChatter.GroupChatter.QuestObjectiveCooldown", 30);
@@ -296,6 +304,10 @@ void LLMChatterConfig::LoadConfig()
         GetChatterOption<uint32>(
             "LLMChatter.GeneralChat."
             "ReactDelay", 5);
+    _reactDelayGuildMsg =
+        GetChatterOption<uint32>(
+            "LLMChatter.GuildChat."
+            "ReactDelay", 3);
     _reactDelayEmote =
         GetChatterOption<uint32>(
             "LLMChatter.GroupChatter."
@@ -494,6 +506,96 @@ void LLMChatterConfig::LoadConfig()
         GetChatterOption<uint32>(
             "LLMChatter.GeneralChat.HistoryLimit",
             15);
+
+    // Guild chat reactions
+    _guildChatEnable =
+        GetChatterOption<bool>(
+            "LLMChatter.GuildChat.Enable", false);
+    _guildChatPlayerMessageChance =
+        GetChatterOption<uint32>(
+            "LLMChatter.GuildChat.TriggerChance",
+            GetChatterOption<uint32>(
+                "LLMChatter.GuildChat."
+                "PlayerMessageChance", 85));
+    _guildChatPlayerMessageCooldown =
+        GetChatterOption<uint32>(
+            "LLMChatter.GuildChat."
+            "PlayerMessageCooldown", 45);
+    _guildChatJoinGreetingEnable =
+        GetChatterOption<bool>(
+            "LLMChatter.GuildChat."
+            "JoinGreetingEnable", true);
+    _guildChatLoginGreetingEnable =
+        GetChatterOption<bool>(
+            "LLMChatter.GuildChat."
+            "LoginGreetingEnable", true);
+    _guildChatPlayerLoginGreetingEnable =
+        GetChatterOption<bool>(
+            "LLMChatter.GuildChat."
+            "PlayerLoginGreetingEnable", true);
+    _guildChatPlayerLoginGreetingChance =
+        GetChatterOption<uint32>(
+            "LLMChatter.GuildChat."
+            "PlayerLoginGreetingChance", 100);
+    _guildChatPlayerLoginGreetingCooldown =
+        GetChatterOption<uint32>(
+            "LLMChatter.GuildChat."
+            "PlayerLoginGreetingCooldown", 900);
+    _guildChatWelcomeReplyMin =
+        GetChatterOption<uint32>(
+            "LLMChatter.GuildChat."
+            "WelcomeReplyMin", 1);
+    _guildChatWelcomeReplyMax =
+        GetChatterOption<uint32>(
+            "LLMChatter.GuildChat."
+            "WelcomeReplyMax", 3);
+    if (_guildChatWelcomeReplyMin
+        > _guildChatWelcomeReplyMax)
+    {
+        _guildChatWelcomeReplyMin =
+            _guildChatWelcomeReplyMax;
+    }
+    _guildChatEventChance =
+        GetChatterOption<uint32>(
+            "LLMChatter.GuildChat.EventChance", 15);
+    _guildChatEventCooldown =
+        GetChatterOption<uint32>(
+            "LLMChatter.GuildChat.EventCooldown", 120);
+    _guildChatAmbientEnable =
+        GetChatterOption<bool>(
+            "LLMChatter.GuildChat.AmbientEnable", true);
+    _guildChatAmbientIntervalSeconds =
+        GetChatterOption<uint32>(
+            "LLMChatter.GuildChat.TriggerIntervalSeconds",
+            GetChatterOption<uint32>(
+                "LLMChatter.GuildChat."
+                "AmbientIntervalSeconds", 120));
+    _guildChatAmbientChance =
+        GetChatterOption<uint32>(
+            "LLMChatter.GuildChat.AmbientChance", 25);
+    _guildChatAmbientCooldown =
+        GetChatterOption<uint32>(
+            "LLMChatter.GuildChat.AmbientCooldown", 240);
+    _guildChatConversationChance =
+        GetChatterOption<uint32>(
+            "LLMChatter.GuildChat.ConversationChance", 20);
+    _guildChatMaxConversationMessages =
+        GetChatterOption<uint32>(
+            "LLMChatter.GuildChat.MaxConversationMessages", 3);
+    _guildChatLevelAchievementEchoEnable =
+        GetChatterOption<bool>(
+            "LLMChatter.GuildChat."
+            "LevelAchievementEchoEnable", true);
+    _guildChatLevelAchievementEchoCooldown =
+        GetChatterOption<uint32>(
+            "LLMChatter.GuildChat."
+            "LevelAchievementEchoCooldown", 300);
+    _guildChatMotdLoginChance =
+        GetChatterOption<uint32>(
+            "LLMChatter.GuildChat.MotdLoginChance", 5);
+    _guildChatHistoryLimit =
+        GetChatterOption<uint32>(
+            "LLMChatter.GuildChat.HistoryLimit", 20);
 
     // RP enrichment
     _raceLoreChance = GetChatterOption<uint32>("LLMChatter.RaceLoreChance", 20);
