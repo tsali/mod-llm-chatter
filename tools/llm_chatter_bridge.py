@@ -56,6 +56,8 @@ from chatter_shared import (
     set_action_chance,
     set_emote_chance,
     set_language,
+    get_language_label,
+    is_supported_language_code,
     parse_config, get_db_connection,
     parse_extra_data,
     wait_for_database,
@@ -1172,9 +1174,21 @@ def main():
     set_emote_chance(int(config.get(
         'LLMChatter.EmoteChance', 50
     )))
-    set_language(config.get(
+    language_code = str(config.get(
         'LLMChatter.Language', 'GB'
-    ))
+    )).strip().upper() or 'GB'
+    set_language(language_code)
+    if not is_supported_language_code(language_code):
+        logger.warning(
+            "LLMChatter.Language configured=%s is not "
+            "supported; resolved=%s",
+            language_code, get_language_label(),
+        )
+    else:
+        logger.info(
+            "LLMChatter.Language configured=%s resolved=%s",
+            language_code, get_language_label(),
+        )
     init_group_config(config)
     init_general_config(config)
 

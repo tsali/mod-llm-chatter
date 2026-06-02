@@ -1210,27 +1210,77 @@ _language = ""
 
 # Human-readable label used in the prompt rule.
 _LANGUAGE_LABELS = {
+    "DE": "German",
+    "ES": "Spanish",
     "FR": "French",
     "GB": "English",
+    "PT": "Portuguese",
+    "RU": "Russian",
     "US": "English",
 }
 
 
 def set_language(code: str) -> None:
-    """Set from config: LLMChatter.Language (FR | GB | US).
+    """Set from config: LLMChatter.Language.
 
-    Stored as the canonical label ('French' / 'English').
-    Empty / unknown / English values are stored as "" so
-    no extra instruction is emitted (saves tokens on the
-    default English case).
+    Stored as the canonical label. Empty / English values
+    are stored as "" so no extra instruction is emitted
+    for the default English case.
     """
     global _language
     if not code:
         _language = ""
+        logger.info(
+            "LLMChatter.Language unset; using English default"
+        )
         return
-    label = _LANGUAGE_LABELS.get(code.strip().upper(), "")
-    # English is the implicit default — emit nothing.
-    _language = "" if label in ("", "English") else label
+
+    raw_code = str(code).strip().upper()
+    if not raw_code:
+        _language = ""
+        logger.info(
+            "LLMChatter.Language blank; using English default"
+        )
+        return
+
+    label = _LANGUAGE_LABELS.get(raw_code)
+    if label is None:
+        _language = ""
+        logger.warning(
+            "Unknown LLMChatter.Language=%s; using English "
+            "default. Add the code to _LANGUAGE_LABELS in "
+            "tools/chatter_shared.py to enable it.",
+            raw_code,
+        )
+        return
+
+    # English is the implicit default; emit no rule.
+    if label == "English":
+        _language = ""
+        logger.info(
+            "LLMChatter.Language=%s resolved to English "
+            "default",
+            raw_code,
+        )
+        return
+
+    _language = label
+    logger.info(
+        "LLMChatter.Language=%s resolved to %s",
+        raw_code, label,
+    )
+
+
+def get_language_label() -> str:
+    """Return resolved language label for startup logging."""
+    return _language or "English"
+
+
+def is_supported_language_code(code: str) -> bool:
+    """Return whether a config language code is supported."""
+    if not code:
+        return False
+    return str(code).strip().upper() in _LANGUAGE_LABELS
 
 
 def get_language_rule() -> str:
@@ -1250,7 +1300,10 @@ def get_language_rule() -> str:
         "Exception: keep WoW proper nouns (zone, "
         "subzone, creature, NPC, item, spell, quest, "
         "and character names) in English exactly as "
-        "written — never translate them."
+        "written — never translate them. If prompt "
+        "examples are in English, treat them as "
+        "structure/style only and translate generated "
+        "dialogue and narration."
     )
 
 
@@ -1437,8 +1490,8 @@ def append_conversation_json_instruction(
         action_text = (
             "Actions: EVERY message MUST include a "
             "non-null \"action\" field — a 2-5 word "
-            "physical narration (e.g. \"leans against "
-            "the wall\"). "
+            "physical narration in the configured "
+            "language. "
             "NEVER include the speaker's own name in "
             "the action — the client already shows it. "
             "NEVER put {item:}, {quest:}, or "
