@@ -157,8 +157,9 @@ Built from the ground up for **fantasy roleplay immersion**. Every system, perso
 1. Clone into `modules/` and build AzerothCore
 2. Copy `conf/mod_llm_chatter.conf.dist` to your config directory and name it `mod_llm_chatter.conf`
 3. Set your LLM provider and the matching API key (`LLMChatter.Anthropic.ApiKey`, `LLMChatter.OpenAI.ApiKey`, `LLMChatter.Google.ApiKey`, `LLMChatter.OpenRouter.ApiKey`, or no key when using Ollama)
-4. Start the Python bridge
-5. Play, bots start chatting when grouped with players
+4. Start worldserver once, or run `dbimport`, so AzerothCore applies the module's character database schema
+5. Start the Python bridge
+6. Play, bots start chatting when grouped with players
 
 See [Setup](#setup) below for detailed Docker, non-Docker, and SQL preparation steps.
 
@@ -298,7 +299,22 @@ services:
     profiles: [dev]
 ```
 
-**3. Load talent data (optional)**
+**3. Initialize character tables**
+
+The chatter bridge does not create database tables. AzerothCore imports
+the module SQL automatically when worldserver or `dbimport` runs, but
+the bridge can fail on a fresh database if it starts first.
+
+On a fresh install, either start worldserver once before starting the
+bridge, or import the base character schema manually after the database
+container is running:
+
+```bash
+docker exec -i ac-database mysql -uroot -ppassword acore_characters < \
+  modules/mod-llm-chatter/data/sql/characters/base/00000000_llm_chatter_tables.sql
+```
+
+**4. Load talent data (optional)**
 
 Populates talent and spell lookup tables that give the LLM richer context about each bot's specialization, resulting in more accurate class-aware dialogue. Uses `INSERT IGNORE` and is safe to run on any existing database.
 
@@ -307,7 +323,7 @@ docker exec -i ac-database mysql -uroot -ppassword acore_world < \
   modules/mod-llm-chatter/data/sql/world/base/llm_chatter_talent_dbc.sql
 ```
 
-**4. Start**
+**5. Start**
 ```bash
 docker compose --profile dev up -d
 ```
@@ -322,14 +338,28 @@ Copy `conf/mod_llm_chatter.conf.dist` to your server's config directory (typical
 - `LLMChatter.Provider`,  choose `anthropic`, `openai`, `google`, `openrouter`, or `ollama`
 - the matching provider API key, for example `LLMChatter.OpenRouter.ApiKey` when using OpenRouter (not needed for Ollama)
 
-**3. Start the bridge**
+**3. Initialize character tables**
+
+The chatter bridge does not create database tables. AzerothCore imports
+the module SQL automatically when worldserver or `dbimport` runs, but
+the bridge can fail on a fresh database if it starts first.
+
+On a fresh install, either start worldserver once before starting the
+bridge, or import the base character schema manually:
+
+```bash
+mysql -uroot -ppassword acore_characters < \
+  data/sql/characters/base/00000000_llm_chatter_tables.sql
+```
+
+**4. Start the bridge**
 ```bash
 cd tools/
 pip install -r requirements.txt
 python llm_chatter_bridge.py --config /path/to/mod_llm_chatter.conf
 ```
 
-**4. Load talent data (optional)**
+**5. Load talent data (optional)**
 
 Populates talent and spell lookup tables that give the LLM richer context about each bot's specialization, resulting in more accurate class-aware dialogue. Uses `INSERT IGNORE`,  safe on any existing database.
 
@@ -338,7 +368,7 @@ mysql -uroot -ppassword acore_world < \
   data/sql/world/base/llm_chatter_talent_dbc.sql
 ```
 
-**5. Start worldserver**,  database tables are created automatically.
+**6. Start or keep worldserver running.**
 
 ---
 
@@ -447,10 +477,11 @@ Make sure WoW is in the foreground (the agent only captures when WoW is the acti
 > **First-time installing the module? Skip this section.**
 > The base schema in
 > `data/sql/characters/base/00000000_llm_chatter_tables.sql`
-> already contains everything every migration adds. Fresh installs
-> create all tables automatically on first worldserver startup before
-> dated migrations run — you do **not** need to run any of the SQL
-> files below.
+> already contains everything every migration adds. Fresh installs do
+> **not** need the dated migration files below after the base schema has
+> been applied. That can happen automatically through worldserver or
+> `dbimport`, or manually with the setup command above if the bridge is
+> started before worldserver.
 
 **Existing installs** must apply migration scripts manually
 when updating to a newer version. Migrations live in
