@@ -773,10 +773,10 @@ void HandleGroupPlayerEnterCombatImpl(
 }
 
 void HandleGroupPlayerBeforeSendChatMessageImpl(
-    Player* player, uint32& type,
+    Player* player, uint32& type, uint32& lang,
     std::string& msg)
 {
-    HandleProximityPlayerSay(player, type, msg);
+    HandleProximityPlayerSay(player, type, lang, msg);
 
     if (type != CHAT_MSG_PARTY
         && type != CHAT_MSG_PARTY_LEADER)
@@ -787,6 +787,11 @@ void HandleGroupPlayerBeforeSendChatMessageImpl(
         return;
 
     if (!player || msg.empty())
+        return;
+
+    // Ignore hidden addon traffic (DBM, Questie, ElvUI, ...);
+    // it is real chat tagged LANG_ADDON, not player speech.
+    if (lang == LANG_ADDON)
         return;
 
     {

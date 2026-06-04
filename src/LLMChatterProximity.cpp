@@ -1308,7 +1308,7 @@ void CheckProximityChatter()
 }
 
 void HandleProximityPlayerSay(
-    Player* player, uint32 type,
+    Player* player, uint32 type, uint32 language,
     std::string const& msg)
 {
     if (!sLLMChatterConfig
@@ -1317,8 +1317,11 @@ void HandleProximityPlayerSay(
         || !sLLMChatterConfig->_useEventSystem)
         return;
 
+    // Ignore hidden addon traffic (DBM, Questie, ElvUI, ...);
+    // it is real chat tagged LANG_ADDON, not player speech.
     if (!player || IsPlayerBot(player)
-        || type != CHAT_MSG_SAY)
+        || type != CHAT_MSG_SAY
+        || language == LANG_ADDON)
         return;
 
     EvictExpiredScenes();

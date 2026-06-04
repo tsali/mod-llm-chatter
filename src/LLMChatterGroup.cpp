@@ -631,7 +631,7 @@ void HandleGroupLootEventImpl(
 void HandleGroupPlayerEnterCombatImpl(
     Player* player, Unit* enemy);
 void HandleGroupPlayerBeforeSendChatMessageImpl(
-    Player* player, uint32& type,
+    Player* player, uint32& type, uint32& lang,
     std::string& msg);
 void HandleGroupPlayerLevelChangedImpl(
     Player* player, uint8 oldLevel);
@@ -734,11 +734,11 @@ public:
     }
     void OnPlayerBeforeSendChatMessage(
         Player* player, uint32& type,
-        uint32& /*lang*/,
+        uint32& lang,
         std::string& msg) override
     {
         HandleGroupPlayerBeforeSendChatMessageImpl(
-            player, type, msg);
+            player, type, lang, msg);
     }
     void OnPlayerLevelChanged(
         Player* player, uint8 oldLevel) override
