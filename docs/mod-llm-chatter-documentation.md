@@ -22,8 +22,6 @@ High-level behavior:
 - ambient General-channel chatter in the open world
 - reactive party chatter for grouped bots
 - General-channel reactions to real player chat
-- guild chat reactions, bot greetings, guild event flavor, and ambient
-  guild exchanges
 - world event chatter for weather, holidays, transports, and nearby
   points of interest
 - battleground chatter for flag, node, PvP, milestone, and related BG
@@ -77,8 +75,7 @@ After Python writes the message rows, C++ delivers them in game on the
 world tick.
 
 Party channel may play text emotes.
-General, raid, battleground, and guild delivery do not play text
-emotes.
+General, raid, and battleground delivery do not play text emotes.
 
 ---
 
@@ -262,7 +259,6 @@ Registration coordinator only. Calls:
 - `AddLLMChatterWorldScripts()`
 - `AddLLMChatterGroupScripts()`
 - `AddLLMChatterPlayerScripts()`
-- `AddLLMChatterGuildScripts()`
 - `AddLLMChatterBGScripts()`
 - `AddLLMChatterRaidScripts()`
 
@@ -322,7 +318,7 @@ Owns outbound delivery behavior:
 - `DeliverPendingMessagesImpl()`
 - DB polling for ready `llm_chatter_messages` rows
 - pre-send facing selection
-- party, raid, BG, guild, yell, and General delivery paths
+- party, raid, BG, yell, and General delivery paths
 - post-send delivery and retry updates
 
 ### `src/LLMChatterAmbient.cpp`
@@ -419,20 +415,6 @@ Owns player General-channel behavior:
 - `OnPlayerCanUseChat(..., Channel*)`
 - writes to `llm_general_chat_history`
 
-### `src/LLMChatterGuild.cpp`
-
-Owns guild-channel event capture and queueing:
-
-- real player guild chat via `OnPlayerCanUseChat(..., Guild*)`
-- guild bot join and login greetings
-- ambient guild chatter checks
-- MOTD/info/rank/bank guild events
-- guild bot level-up and achievement echoes
-
-The guild `Can` hook always returns `true` after queueing so real
-player guild chat is not blocked. C++ only queues guild events; Python
-owns `llm_guild_chat_history` writes.
-
 ### `src/LLMChatterBG.cpp`
 
 Owns battleground-specific hooks and BG queue helpers.
@@ -454,12 +436,6 @@ Owns battleground-specific hooks and BG queue helpers.
 - `tools/chatter_handler_pipeline.py`
 - `tools/chatter_group_prompts.py`
 - `tools/chatter_group_state.py`
-
-### Guild domain
-
-- `tools/chatter_guild.py`
-- `tools/chatter_guild_prompts.py`
-- `tools/chatter_guild_topics.py`
 
 ### Routing and handler pipeline
 
@@ -771,113 +747,6 @@ The relay chance is controlled by
 relay fires, the first party line is scheduled for 3-6 seconds after the
 General line's planned visible time. The first party line must reference
 the General speaker by name.
-
----
-
-## 8b. Guild Chatter
-
-Guild chatter covers bot-authored `/guild` lines for guilds that have at
-least one online real guild member and one online random bot.
-
-### Event families
-
-- `guild_player_msg`: a bot can react to a real player's guild message
-- `guild_member_joined`: a newly invited guild bot greets the guild
-- `guild_bot_login`: an existing guild bot can greet after login
-- `guild_social_event`: MOTD/info/rank/bank, bot level-up, or bot
-  achievement flavor, plus `member_online` greetings when a real guild
-  member logs in
-- `guild_ambient`: occasional guild-wide chatter not tied to a direct
-  player message
-
-### Runtime behavior
-
-Guild prompts include selected online guildmates and selected guildmate
-speakers with race, class, level, rank, and location. The speaking bot
-also receives persistent identity traits, tone, and backstory from
-`llm_bot_identities`.
-Selected guild bot speakers must have the guild-chat speak right on
-their guild rank; C++ still enforces the same right at delivery.
-
-Direct player guild-message replies are controlled by
-`LLMChatter.GuildChat.TriggerChance` (preferred) /
-`PlayerMessageChance` (compatibility alias) and
-`PlayerMessageCooldown`. Ambient guild chatter uses
-`TriggerIntervalSeconds` (preferred) /
-`AmbientIntervalSeconds` (compatibility alias), `AmbientChance`, and
-`AmbientCooldown`. `ConversationChance` controls whether eligible
-player-message or ambient guild events become short bot-to-bot
-exchanges.
-The first line of a guild conversation keeps normal responsive timing;
-follow-up bot lines are spaced by
-`GuildChat.ConversationMinGapSeconds` to
-`GuildChat.ConversationMaxGapSeconds`.
-
-Guild join and welcome messages use `chatter_guild_pacing.py` with
-`llm_guild_chat_pacing` to reserve spaced visible delivery slots per
-guild. This specifically handles charter/guild-creation bursts where
-many bots join within the same second. The configurable visible gap is
-`JoinBurstMinGapSeconds` to `JoinBurstMaxGapSeconds`.
-
-Real-player login greetings reuse `guild_social_event` with
-`event_kind = member_online`. If online guild bots are present, Python
-chooses `PlayerLoginGreetingMin` to `PlayerLoginGreetingMax` eligible
-bot speakers and generates separate casual greetings in guild chat.
-The server-side `PlayerLoginGreetingCooldown` prevents relog/crash
-loops from flooding the guild.
-
-Guild prompt wording is RP-first. In roleplay mode, guild messages must
-stay fully in character and avoid meta terms such as bots, players,
-AI, prompts, addons, game client, UI, server, or roleplay mode. The
-prompt includes the same RP enrichment style used by General chatter:
-race/class cultural context, race flavor vocabulary, current tone,
-current mood, a possible scene angle, time/season/weather context, and
-the speaker's own zone flavor. In guild chat, zone flavor always belongs
-to the speaking bot's current location; player/guildmate locations are
-only comparison context for same-location wording. Location is optional
-prompt context, not a required line subject; guild prompts rotate line
-focus across player-message replies, class/race voice, guild identity,
-practical advice, quests, memories, mood, and occasional location
-flavor. Explicit place/topic prompts always receive location context;
-otherwise guild prompt builders inject speaking-bot location context by
-RNG at roughly 5%. The current non-roleplay guild path is intentionally
-not optimized.
-
-Guild MOTD context is intentionally rare. Explicit MOTD-change events
-and login lines selected for MOTD focus can include it; ordinary guild
-prompts include the MOTD only by `GuildChat.MotdContextChance` and
-otherwise tell the model not to mention the message of the day.
-
-Guild prompts randomize line shape. `GuildChat.ShortLineChance`
-controls how often a prompt asks for a very short casual line, while
-the remaining prompts ask for medium or fuller roleplay lines. This
-keeps guild chat from settling into one repeated message length.
-
-When only one real guildmate and one bot are online, the prompt forbids
-plural crowd phrasing such as "guys", "everyone", or "we all". With at
-least two online guild bots, player-message and ambient guild events may
-become short bot-to-bot exchanges using selected bot speakers.
-
-Guild prompts must not offer, request, or imply invites, grouping,
-queueing, summons, portals, runs, carries, meet-ups, or coordinated
-activity. Bots may ask for advice or mention goals/stories, but guild
-chat cannot promise actions the bot AI will not perform.
-
-Guild chat does not create memories. It may recall existing
-bot/player memories with `get_bot_memories(..., mark_used=False)`, so a
-party-created memory can be reminisced about in guild chat without
-marking that memory as consumed.
-
-### Ownership
-
-| File | Purpose |
-|---|---|
-| `LLMChatterGuild.cpp` | Guild hooks, ambient guild checks, event queueing |
-| `LLMChatterDelivery.cpp` | `channel = 'guild'` delivery via `SayToGuild()` |
-| `chatter_guild.py` | Guild handlers, speaker selection, history writes |
-| `chatter_guild_pacing.py` | Guild join-burst visible delivery pacing |
-| `chatter_guild_prompts.py` | Guild prompt construction |
-| `chatter_guild_topics.py` | Guild topic pool and event-topic mapping |
 
 ---
 
@@ -2176,8 +2045,6 @@ Typical multi-message JSON shape:
 | `llm_group_bot_traits` | Python + C++ travel refresh | Python | Group personality, location, and live travel state |
 | `llm_group_chat_history` | Python | Python | Group anti-repetition history |
 | `llm_general_chat_history` | C++/Python read path | Python/C++ | General-channel history |
-| `llm_guild_chat_history` | Python | Python | Guild-channel history |
-| `llm_guild_chat_pacing` | Python | Python | Per-guild join-burst delivery pacing reservations |
 | `llm_bot_memories` | Python | Python | Per-bot-per-player memory journal (active=1 persists; first_meeting immune to prune) |
 | `llm_bot_identities` | Python | Python | Persistent bot personality traits; regenerated on IdentityVersion bump |
 
@@ -2213,7 +2080,6 @@ constructor's `enabledHooks` vector or it will silently never fire.
 - `LLMChatterGroupQuest.cpp` for quest accept batching and CreatureScript
 - `LLMChatterProximity.cpp` for proximity chatter scan and scene logic
 - `LLMChatterPlayer.cpp` for General-channel player logic
-- `LLMChatterGuild.cpp` for guild-channel hooks and event queueing
 - `LLMChatterShared.cpp` for shared helper contracts
 - `LLMChatterScript.cpp` is registration only — do not add features here
 

@@ -1082,13 +1082,11 @@ def rehydrate_active_sessions(db):
 def get_bot_memories(
     db, bot_guid, player_guid, count=3,
     exclude_first_meeting=False,
-    mark_used=True,
 ):
     """Retrieve random active memories for a
     bot-player pair.
 
     Returns list of memory strings (may be empty).
-    When mark_used is false, recall is non-consuming.
     """
     try:
         extra = (
@@ -1108,7 +1106,7 @@ def get_bot_memories(
             (bot_guid, player_guid, count),
         )
         rows = cursor.fetchall()
-        if rows and mark_used:
+        if rows:
             ids = [row['id'] for row in rows]
             placeholders = ','.join(
                 ['%s'] * len(ids)
