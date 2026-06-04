@@ -153,7 +153,6 @@ public:
     uint32 _reactDelayNearbyObject;
     uint32 _reactDelayBGEvent;
     uint32 _reactDelayGeneralMsg;
-    uint32 _reactDelayGuildMsg;
     uint32 _reactDelayEmote;
 
     // Group chatter - combat engagement chances (0-100)
@@ -220,30 +219,6 @@ public:
     uint32 _generalChatCooldown;
     uint32 _generalChatConversationChance;
     uint32 _generalChatHistoryLimit;
-
-    // Guild chat reactions
-    bool _guildChatEnable;
-    uint32 _guildChatPlayerMessageChance;
-    uint32 _guildChatPlayerMessageCooldown;
-    bool _guildChatJoinGreetingEnable;
-    bool _guildChatLoginGreetingEnable;
-    bool _guildChatPlayerLoginGreetingEnable;
-    uint32 _guildChatPlayerLoginGreetingChance;
-    uint32 _guildChatPlayerLoginGreetingCooldown;
-    uint32 _guildChatWelcomeReplyMin;
-    uint32 _guildChatWelcomeReplyMax;
-    uint32 _guildChatEventChance;
-    uint32 _guildChatEventCooldown;
-    bool _guildChatAmbientEnable;
-    uint32 _guildChatAmbientIntervalSeconds;
-    uint32 _guildChatAmbientChance;
-    uint32 _guildChatAmbientCooldown;
-    uint32 _guildChatConversationChance;
-    uint32 _guildChatMaxConversationMessages;
-    bool _guildChatLevelAchievementEchoEnable;
-    uint32 _guildChatLevelAchievementEchoCooldown;
-    uint32 _guildChatMotdLoginChance;
-    uint32 _guildChatHistoryLimit;
 
     // RP enrichment
     uint32 _raceLoreChance;

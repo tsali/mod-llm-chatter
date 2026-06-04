@@ -77,11 +77,6 @@ CREATE TABLE IF NOT EXISTS `llm_chatter_events` (
         'proximity_reply',
         'proximity_player_say',
         'proximity_player_conversation',
-        'guild_player_msg',
-        'guild_member_joined',
-        'guild_bot_login',
-        'guild_social_event',
-        'guild_ambient',
         'bot_backstory_regen',
         'bot_tone_regen'
     ) NOT NULL,
@@ -225,36 +220,6 @@ CREATE TABLE IF NOT EXISTS `llm_general_chat_history` (
     `created_at` TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
     INDEX `idx_zone_id` (`zone_id`),
     INDEX `idx_created_at` (`created_at`)
-) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4;
-
--- Chat history for guild conversations (per-guild)
-CREATE TABLE IF NOT EXISTS `llm_guild_chat_history` (
-    `id` INT UNSIGNED AUTO_INCREMENT PRIMARY KEY,
-    `guild_id` INT UNSIGNED NOT NULL,
-    `speaker_guid` INT UNSIGNED DEFAULT NULL,
-    `speaker_name` VARCHAR(64) NOT NULL,
-    `is_bot` TINYINT(1) NOT NULL DEFAULT 0,
-    `message` VARCHAR(255) NOT NULL,
-    `event_type` VARCHAR(48) DEFAULT NULL,
-    `topic_category` VARCHAR(64) DEFAULT NULL,
-    `created_at` TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
-    INDEX `idx_guild_id` (`guild_id`),
-    INDEX `idx_created_at` (`created_at`),
-    INDEX `idx_guild_created` (`guild_id`, `created_at`),
-    INDEX `idx_guild_topic` (`guild_id`, `topic_category`, `created_at`)
-) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4;
-
--- Per-guild visible chat pacing reservations.
-CREATE TABLE IF NOT EXISTS `llm_guild_chat_pacing` (
-    `guild_id` INT UNSIGNED NOT NULL,
-    `next_available_at` TIMESTAMP NULL DEFAULT NULL,
-    `last_activity_at` TIMESTAMP NULL DEFAULT NULL,
-    `last_policy` VARCHAR(24) DEFAULT NULL,
-    `last_reason` VARCHAR(64) DEFAULT NULL,
-    `updated_at` TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP
-        ON UPDATE CURRENT_TIMESTAMP,
-    PRIMARY KEY (`guild_id`),
-    KEY `idx_updated_at` (`updated_at`)
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4;
 
 -- Pre-cached LLM responses for instant combat delivery

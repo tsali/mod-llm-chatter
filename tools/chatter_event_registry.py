@@ -28,7 +28,7 @@ class EventSpec:
 
 
 # --------------------------------------------------
-# Live event registry - 65 entries
+# Live event registry — 54 entries
 # --------------------------------------------------
 
 EVENT_REGISTRY: Dict[str, EventSpec] = {
@@ -956,75 +956,6 @@ EVENT_REGISTRY: Dict[str, EventSpec] = {
             'previous_period': (str, True),
             'description': (str, True),
             'season': (str, False),
-        },
-    ),
-
-    # -- Guild chat events -------------------------
-
-    'guild_player_msg': EventSpec(
-        handler_module='chatter_guild',
-        handler_func='process_guild_player_msg_event',
-        producer='LLMChatterGuild.cpp',
-        priority='high',
-        description=(
-            'Bot reacts to real player guild chat'
-        ),
-        payload_fields={
-            'guild_id': (int, True),
-            'guild_name': (str, False),
-            'player_name': (str, True),
-            'player_message': (str, True),
-        },
-    ),
-
-    'guild_member_joined': EventSpec(
-        handler_module='chatter_guild',
-        handler_func='process_guild_member_joined_event',
-        producer='LLMChatterGuild.cpp',
-        priority='high',
-        description='New guild bot greets the guild',
-        payload_fields={
-            'guild_id': (int, True),
-            'bot_guid': (int, True),
-            'bot_name': (str, True),
-        },
-    ),
-
-    'guild_bot_login': EventSpec(
-        handler_module='chatter_guild',
-        handler_func='process_guild_bot_login_event',
-        producer='LLMChatterGuild.cpp',
-        description=(
-            'Existing guild bot logs in with flavor'
-        ),
-        payload_fields={
-            'guild_id': (int, True),
-            'bot_guid': (int, True),
-            'bot_name': (str, True),
-        },
-    ),
-
-    'guild_social_event': EventSpec(
-        handler_module='chatter_guild',
-        handler_func='process_guild_social_event',
-        producer='LLMChatterGuild.cpp',
-        description=(
-            'Guild MOTD, rank, bank, level, or achievement event'
-        ),
-        payload_fields={
-            'guild_id': (int, True),
-            'event_kind': (str, True),
-        },
-    ),
-
-    'guild_ambient': EventSpec(
-        handler_module='chatter_guild',
-        handler_func='process_guild_ambient_event',
-        producer='LLMChatterGuild.cpp',
-        priority='filler',
-        description='Optional ambient guild chatter',
-        payload_fields={
-            'guild_id': (int, True),
         },
     ),
 

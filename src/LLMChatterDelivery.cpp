@@ -510,11 +510,6 @@ void DeliverPendingMessagesImpl()
                         processedMessage);
                 }
             }
-            else if (channel == "guild")
-            {
-                sent = ai->SayToGuild(
-                    processedMessage);
-            }
             else
             {
                 // Force-enroll the bot in the
@@ -593,7 +588,6 @@ void DeliverPendingMessagesImpl()
             if (sent
                 && !emoteName.empty()
                 && channel != "general"
-                && channel != "guild"
                 && channel != "yell")
             {
                 if (!((channel == "battleground"
