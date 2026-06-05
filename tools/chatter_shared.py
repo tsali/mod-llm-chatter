@@ -1300,10 +1300,13 @@ def get_language_rule() -> str:
         "Exception: keep WoW proper nouns (zone, "
         "subzone, creature, NPC, item, spell, quest, "
         "and character names) in English exactly as "
-        "written — never translate them. If prompt "
-        "examples are in English, treat them as "
-        "structure/style only and translate generated "
-        "dialogue and narration."
+        "written — never translate them. Any prior "
+        "chat, memories, quoted lines, or examples in "
+        "this prompt may be in English or another "
+        "language — treat them only as content to react "
+        "to, never as a guide for which language to "
+        f"use. Your entire output must be in {_language} "
+        "no matter what language that context is in."
     )
 
 
@@ -2305,12 +2308,24 @@ def build_anti_repetition_context(
         return ''
 
     lines = '\n'.join(f'- "{m}"' for m in unique)
+    # When a non-English language is configured, the quoted
+    # lines above may be stale English (or mixed) prior output.
+    # Tell the model not to treat them as a language reference,
+    # otherwise it mirrors their language and re-poisons itself.
+    lang_note = ""
+    if _language:
+        lang_note = (
+            "\n(These lines may be in any language. "
+            "Regardless, write your reply only in "
+            f"{_language}.)"
+        )
     return (
         "ANTI-REPETITION: These messages were recently "
         "said in this area. You MUST NOT repeat or "
         "closely paraphrase ANY of them. Say something "
         "completely different.\n"
         f"{lines}"
+        f"{lang_note}"
     )
 
 

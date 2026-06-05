@@ -83,6 +83,25 @@ def test_de_language_rule_is_available():
     assert "action" in rule
     assert chatter_shared.get_language_label() == "German"
     assert chatter_shared.is_supported_language_code("DE")
+    # Rule must neutralize the language of injected prior
+    # context (anti-repetition, chat history, memories).
+    assert "never as a guide" in rule
+
+
+def test_anti_repetition_block_neutralizes_language():
+    chatter_shared.set_language("DE")
+    block = chatter_shared.build_anti_repetition_context(
+        ["Schon wieder Regen", "Anyone seen the bank?"]
+    )
+    assert "German" in block
+    assert "any language" in block
+
+    # English default emits no caveat (no extra tokens).
+    chatter_shared.set_language("GB")
+    block_en = chatter_shared.build_anti_repetition_context(
+        ["hello there"]
+    )
+    assert "any language" not in block_en
 
 
 def test_unknown_language_warns_and_falls_back():
@@ -176,6 +195,7 @@ def test_ambient_json_repair_prompt_includes_language_rule():
 def main() -> int:
     tests = [
         test_de_language_rule_is_available,
+        test_anti_repetition_block_neutralizes_language,
         test_unknown_language_warns_and_falls_back,
         test_json_helpers_put_language_in_user_and_system_prompts,
         test_farewell_prompt_includes_language_rule,
