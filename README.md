@@ -46,6 +46,22 @@ Built from the ground up for **fantasy roleplay immersion**. Every system, perso
 
 ## Changelog
 
+### 2026-06-05 - Addon Chat Ingestion Filter
+
+* **Hidden Addon Traffic Ignored**: Party, proximity, and General chat
+  ingestion now drops messages tagged `LANG_ADDON` before they can be
+  stored in chat history or sent to the LLM. This prevents Questie,
+  Multibot, DBM-style sync packets, and similar addon protocol payloads
+  from polluting bot context or memories.
+* **Party Hook Language Preservation**: The group chat hook now threads
+  AzerothCore's language flag through the player-message handler instead
+  of discarding it, allowing addon traffic to be filtered by the engine's
+  authoritative tag rather than brittle text heuristics.
+* **Debug Evidence Logging**: When `LLMChatter.DebugLog = 1`, ignored
+  addon packets are logged with chat type, player, byte length, and an
+  escaped preview so server owners can verify filtering without storing
+  raw addon traffic in LLM-facing history tables.
+
 ### 2026-06-02 - Loot Reaction Chance Configuration
 
 * **Configurable Epic and Legendary Loot Reactions**:

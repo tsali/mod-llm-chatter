@@ -850,8 +850,8 @@ public:
     }
 
     bool OnPlayerCanUseChat(
-        Player* player, uint32 /*type*/,
-        uint32 /*language*/, std::string& msg,
+        Player* player, uint32 type,
+        uint32 language, std::string& msg,
         Channel* channel) override
     {
         if (!sLLMChatterConfig
@@ -875,6 +875,15 @@ public:
 
         if (!player || IsPlayerBot(player))
             return true;
+
+        // Ignore hidden addon traffic (DBM, Questie, ElvUI, ...);
+        // it is real chat tagged LANG_ADDON, not player speech.
+        if (language == LANG_ADDON)
+        {
+            LogIgnoredAddonChat(
+                player, type, msg, "general");
+            return true;
+        }
 
         if (msg.empty())
             return true;

@@ -46,6 +46,62 @@ constexpr uint8 PRIORITY_HIGH_LOCAL = PRIORITY_HIGH + 1;
 constexpr uint8 PRIORITY_CRITICAL =
     static_cast<uint8>(LLMChatterPriorityBand::Critical);
 
+std::string EscapeLogPreview(
+    std::string const& text, size_t maxBytes)
+{
+    auto hexDigit = [](unsigned char value) -> char
+    {
+        return value < 10
+            ? static_cast<char>('0' + value)
+            : static_cast<char>('A' + value - 10);
+    };
+
+    std::string out;
+    out.reserve(std::min(text.size(), maxBytes));
+
+    size_t limit = std::min(text.size(), maxBytes);
+    for (size_t i = 0; i < limit; ++i)
+    {
+        unsigned char c =
+            static_cast<unsigned char>(text[i]);
+        switch (c)
+        {
+            case '\\':
+                out += "\\\\";
+                break;
+            case '\'':
+                out += "\\'";
+                break;
+            case '\n':
+                out += "\\n";
+                break;
+            case '\r':
+                out += "\\r";
+                break;
+            case '\t':
+                out += "\\t";
+                break;
+            default:
+                if (c >= 32 && c < 127)
+                {
+                    out += static_cast<char>(c);
+                }
+                else
+                {
+                    out += "\\x";
+                    out += hexDigit(c >> 4);
+                    out += hexDigit(c & 0x0F);
+                }
+                break;
+        }
+    }
+
+    if (text.size() > maxBytes)
+        out += "...";
+
+    return out;
+}
+
 using DelayMember = uint32 LLMChatterConfig::*;
 
 struct EventPriorityRule
@@ -1237,6 +1293,36 @@ void SetEventCooldown(
     const std::string& cooldownKey)
 {
     cooldownCache[cooldownKey] = time(nullptr);
+}
+
+void LogIgnoredAddonChat(
+    Player const* player, uint32 type,
+    std::string const& msg, char const* source)
+{
+    if (!sLLMChatterConfig
+        || !sLLMChatterConfig->IsDebugLog())
+        return;
+
+    uint32 playerGuid = player
+        ? player->GetGUID().GetCounter()
+        : 0;
+    std::string playerName = player
+        ? player->GetName()
+        : "";
+    std::string preview =
+        EscapeLogPreview(msg, 160);
+
+    LOG_INFO(
+        "module",
+        "LLMChatter: ignored LANG_ADDON chat "
+        "source={} player={} guid={} type={} "
+        "bytes={} preview='{}'",
+        source ? source : "unknown",
+        playerName,
+        playerGuid,
+        type,
+        msg.size(),
+        preview);
 }
 
 bool CanSpeakInGeneralChannel(Player* bot)

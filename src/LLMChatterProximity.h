@@ -9,7 +9,7 @@ class Player;
 
 void CheckProximityChatter();
 void HandleProximityPlayerSay(
-    Player* player, uint32 type,
+    Player* player, uint32 type, uint32 language,
     std::string const& msg);
 void RecordDeliveredProximityLine(
     uint32 eventId, uint32 playerGuid,
