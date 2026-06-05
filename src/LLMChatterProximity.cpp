@@ -1317,12 +1317,18 @@ void HandleProximityPlayerSay(
         || !sLLMChatterConfig->_useEventSystem)
         return;
 
+    if (!player || IsPlayerBot(player)
+        || type != CHAT_MSG_SAY)
+        return;
+
     // Ignore hidden addon traffic (DBM, Questie, ElvUI, ...);
     // it is real chat tagged LANG_ADDON, not player speech.
-    if (!player || IsPlayerBot(player)
-        || type != CHAT_MSG_SAY
-        || language == LANG_ADDON)
+    if (language == LANG_ADDON)
+    {
+        LogIgnoredAddonChat(
+            player, type, msg, "proximity");
         return;
+    }
 
     EvictExpiredScenes();
 

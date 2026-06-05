@@ -792,7 +792,11 @@ void HandleGroupPlayerBeforeSendChatMessageImpl(
     // Ignore hidden addon traffic (DBM, Questie, ElvUI, ...);
     // it is real chat tagged LANG_ADDON, not player speech.
     if (lang == LANG_ADDON)
+    {
+        LogIgnoredAddonChat(
+            player, type, msg, "party");
         return;
+    }
 
     {
         bool hasUnderscore = false;

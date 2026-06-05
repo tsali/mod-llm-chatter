@@ -68,6 +68,9 @@ bool IsEventOnCooldown(
 void SetEventCooldown(
     std::map<std::string, time_t>& cooldownCache,
     const std::string& cooldownKey);
+void LogIgnoredAddonChat(
+    Player const* player, uint32 type,
+    std::string const& msg, char const* source);
 // NOTE: extraData must already be valid JSON text and SQL-safe for
 // direct insertion into a single-quoted SQL string literal.
 void QueueChatterEvent(
