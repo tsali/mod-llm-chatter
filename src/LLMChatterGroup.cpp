@@ -182,11 +182,10 @@ void ResolvePlaceholders(
            && message.back() == ' ')
         message.pop_back();
 
-    // Clamp to max message length
-    if (message.size()
-        > sLLMChatterConfig->_maxMessageLength)
-        message.resize(
-            sLLMChatterConfig->_maxMessageLength);
+    // Clamp to max message length (UTF-8 safe: never
+    // split a multi-byte character)
+    message = NormalizeChatTextForDb(
+        message, sLLMChatterConfig->_maxMessageLength);
 }
 
 // Record a pre-cached message in chat history

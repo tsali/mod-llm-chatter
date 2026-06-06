@@ -25,6 +25,19 @@ enum class LLMChatterPriorityBand : uint8
 
 bool IsPlayerBot(Player* player);
 Creature* FindCreatureBySpawnId(Map* map, uint32 spawnId);
+
+// Strip invalid UTF-8 byte sequences, preserving every
+// valid UTF-8 run. Returns input unchanged when already
+// valid. Used as the universal guard before any SQL/JSON
+// write so invalid bytes (e.g. 0xFF) cannot reach MySQL.
+std::string SanitizeUtf8(const std::string& str);
+
+// SanitizeUtf8 + codepoint-safe truncation to maxChars
+// (0 = no truncation). Single entry point for all
+// length-clamped, DB-bound text.
+std::string NormalizeChatTextForDb(
+    const std::string& str, size_t maxChars = 0);
+
 std::string EscapeString(const std::string& str);
 std::string JsonEscape(const std::string& str);
 std::string GetCreatureRoleName(Creature* creature);

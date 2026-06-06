@@ -886,11 +886,13 @@ void HandleGroupPlayerBeforeSendChatMessageImpl(
         safeMsg = safeMsg.substr(0, lastChar + 1);
     if (safeMsg.empty())
         return;
-    if (safeMsg.size()
-        > sLLMChatterConfig->_maxMessageLength)
-        safeMsg = safeMsg.substr(
-            0,
-            sLLMChatterConfig->_maxMessageLength);
+    // UTF-8 safe clamp: never split a multi-byte character
+    safeMsg = NormalizeChatTextForDb(
+        safeMsg, sLLMChatterConfig->_maxMessageLength);
+    // Normalization can strip an all-invalid payload
+    // (e.g. \xFF\xFF...) down to empty — drop it.
+    if (safeMsg.empty())
+        return;
 
     if (IsLikelyPlayerbotControlCommand(
             safeMsg))
@@ -1147,12 +1149,12 @@ bool HandleGroupPlayerBeforeQuestCompleteImpl(
             JsonEscape(playerName) + "\","
         "\"quest_details\":\"" +
             JsonEscape(
-                quest->GetDetails()
-                    .substr(0, 200)) + "\","
+                NormalizeChatTextForDb(
+                    quest->GetDetails(), 200)) + "\","
         "\"quest_objectives\":\"" +
             JsonEscape(
-                quest->GetObjectives()
-                    .substr(0, 150)) + "\","
+                NormalizeChatTextForDb(
+                    quest->GetObjectives(), 150)) + "\","
         "\"group_id\":" +
             std::to_string(groupId) +
         "}";
@@ -1266,12 +1268,12 @@ void HandleGroupPlayerCompleteQuestImpl(
             std::to_string(questId) + ","
         "\"quest_details\":\"" +
             JsonEscape(
-                quest->GetDetails()
-                    .substr(0, 200)) + "\","
+                NormalizeChatTextForDb(
+                    quest->GetDetails(), 200)) + "\","
         "\"quest_objectives\":\"" +
             JsonEscape(
-                quest->GetObjectives()
-                    .substr(0, 150)) + "\","
+                NormalizeChatTextForDb(
+                    quest->GetObjectives(), 150)) + "\","
         "\"group_id\":" +
             std::to_string(groupId) +
         "}";

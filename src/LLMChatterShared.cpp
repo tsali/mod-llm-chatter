@@ -20,8 +20,11 @@
 #include "Playerbots.h"
 #include "RandomPlayerbotMgr.h"
 #include "Transport.h"
+#include "Util.h"
 #include "World.h"
 #include "WorldSession.h"
+
+#include <utf8.h>
 
 #include <algorithm>
 #include <array>
@@ -1111,9 +1114,48 @@ std::string GetCreatureRoleName(Creature* creature)
     }
 }
 
+std::string SanitizeUtf8(const std::string& str)
+{
+    // Fast path: input is already valid UTF-8.
+    if (utf8::find_invalid(str.begin(), str.end())
+        == str.end())
+        return str;
+
+    // Rebuild keeping valid UTF-8 runs, dropping invalid
+    // bytes one at a time.
+    std::string result;
+    result.reserve(str.size());
+
+    std::string::const_iterator it = str.begin();
+    std::string::const_iterator end = str.end();
+    while (it != end)
+    {
+        std::string::const_iterator next =
+            utf8::find_invalid(it, end);
+        result.append(it, next);
+        if (next == end)
+            break;
+        it = next;
+        ++it; // skip the offending byte
+    }
+
+    return result;
+}
+
+std::string NormalizeChatTextForDb(
+    const std::string& str, size_t maxChars)
+{
+    std::string result = SanitizeUtf8(str);
+    if (maxChars > 0)
+        utf8truncate(result, maxChars);
+    return result;
+}
+
 std::string EscapeString(const std::string& str)
 {
-    std::string result = str;
+    // Universal guard: invalid UTF-8 must never reach a
+    // utf8mb4 text/varchar column (MySQL errno 1366).
+    std::string result = SanitizeUtf8(str);
     size_t pos = 0;
 
     while ((pos = result.find('\\', pos)) != std::string::npos)
@@ -1134,10 +1176,14 @@ std::string EscapeString(const std::string& str)
 
 std::string JsonEscape(const std::string& str)
 {
-    std::string result;
-    result.reserve(str.size() * 2);
+    // Universal guard: invalid UTF-8 must never reach a
+    // MySQL JSON column (errno 3140).
+    std::string sanitized = SanitizeUtf8(str);
 
-    for (char c : str)
+    std::string result;
+    result.reserve(sanitized.size() * 2);
+
+    for (char c : sanitized)
     {
         switch (c)
         {
@@ -2047,7 +2093,11 @@ void QueueChatterEvent(
         NumSql(targetGuid),
         EscapeString(targetName),
         NumSql(targetEntry),
-        extraData,
+        // Final UTF-8 backstop for the JSON column (errno
+        // 3140) regardless of how the caller built it.
+        // Idempotent: strips invalid bytes only, never
+        // touches existing SQL/JSON escaping.
+        SanitizeUtf8(extraData),
         reactAfterSeconds,
         expiresAfterSeconds);
 }

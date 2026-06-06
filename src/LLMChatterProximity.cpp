@@ -1269,13 +1269,9 @@ std::string TrimChatMessage(
         msg.find_last_not_of(" \t\r\n");
     std::string trimmed =
         msg.substr(start, end - start + 1);
-    if (trimmed.size()
-        > sLLMChatterConfig->_maxMessageLength)
-    {
-        trimmed.resize(
-            sLLMChatterConfig->_maxMessageLength);
-    }
-    return trimmed;
+    // UTF-8 safe clamp: never split a multi-byte character
+    return NormalizeChatTextForDb(
+        trimmed, sLLMChatterConfig->_maxMessageLength);
 }
 } // namespace
 

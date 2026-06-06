@@ -946,11 +946,13 @@ public:
                 safeMsg.substr(0, lastChar + 1);
         if (safeMsg.empty())
             return true;
-        if (safeMsg.size()
-            > sLLMChatterConfig->_maxMessageLength)
-            safeMsg = safeMsg.substr(
-                0,
-                sLLMChatterConfig->_maxMessageLength);
+        // UTF-8 safe clamp: never split a multi-byte char
+        safeMsg = NormalizeChatTextForDb(
+            safeMsg, sLLMChatterConfig->_maxMessageLength);
+        // Normalization can strip an all-invalid payload
+        // (e.g. \xFF\xFF...) down to empty — drop it.
+        if (safeMsg.empty())
+            return true;
 
         uint32 zoneId = player->GetZoneId();
         std::string playerName = player->GetName();
