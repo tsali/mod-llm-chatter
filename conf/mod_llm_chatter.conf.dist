@@ -93,6 +93,50 @@ LLMChatter.Enable = 1
 LLMChatter.DebugLog = 0
 
 #
+#   LLMChatter.HealthCheck.Enable
+#       Run a startup preflight diagnostic in the bridge.
+#       It checks the config, DB connection, required tables,
+#       and the LLM provider/key, prints a PASS/FAIL report to
+#       the bridge logs, and loud-exits if a critical problem
+#       would stop bots from chatting (wrong DB credentials,
+#       missing/placeholder API key, unreachable LLM endpoint).
+#       You can also run it standalone:
+#         python chatter_healthcheck.py --config <conf>
+#         python chatter_healthcheck.py --config <conf> --serve
+#       Default: 1 (enabled)
+#       [BRIDGE]
+#
+LLMChatter.HealthCheck.Enable = 1
+
+#
+#   LLMChatter.HealthCheck.LLMProbe
+#       During the startup preflight, make one tiny live LLM
+#       test call to verify the API key / endpoint actually
+#       work. Disable to skip the live call (saves a few
+#       tokens, but configuration errors are caught later).
+#       Default: 1 (enabled)
+#       [BRIDGE]
+#
+LLMChatter.HealthCheck.LLMProbe = 1
+
+#
+#   LLMChatter.HealthCheck.LogPath
+#       Where the startup preflight also writes its PASS/FAIL
+#       report as a plain-text file (in addition to the bridge
+#       logs), so you can open it directly without scraping
+#       container logs. Overwritten on every startup.
+#       Leave empty to derive it from LLMChatter.RequestLog.Path's
+#       directory (e.g. /logs/healthcheck.log). For Docker users
+#       /logs is the bind mount, so the file appears on the host
+#       at modules/mod-llm-chatter/logs/healthcheck.log. Non-Docker
+#       users get the file wherever this directory points, as long
+#       as it is writable.
+#       Default: (empty -> <RequestLog dir>/healthcheck.log)
+#       [BRIDGE]
+#
+LLMChatter.HealthCheck.LogPath =
+
+#
 #   LLMChatter.RequestLog.Enable
 #       Log every LLM API call (prompt, response,
 #       timing) to a JSONL file for offline analysis.

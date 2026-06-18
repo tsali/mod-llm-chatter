@@ -1611,6 +1611,70 @@ def main():
     )
     logger.info("=" * 60)
 
+    # Startup health check (preflight). Surfaces the most
+    # common "bots won't chat" failures (DB creds, missing /
+    # placeholder API key, unreachable LLM endpoint) in the
+    # container logs and loud-exits on a critical failure.
+    if config.get('LLMChatter.HealthCheck.Enable', '1') == '1':
+        do_llm = config.get(
+            'LLMChatter.HealthCheck.LLMProbe', '1'
+        ) == '1'
+        config['__healthcheck_config_path__'] = args.config
+        try:
+            from chatter_healthcheck import (
+                run_all_checks,
+                has_critical_failure,
+                render_text_report,
+                save_report_file,
+            )
+            results = run_all_checks(
+                config, do_llm_probe=do_llm
+            )
+            for line in render_text_report(
+                results, args.config
+            ).splitlines():
+                logger.info(line)
+            # Also persist the report to a plain-text file so
+            # users can open it directly (Docker users via the
+            # /logs bind mount) without scraping container logs.
+            hc_log_path = config.get(
+                'LLMChatter.HealthCheck.LogPath', ''
+            ).strip()
+            if not hc_log_path:
+                base_dir = snapshot_dir or (
+                    _os.path.dirname(_log_path) or '/logs'
+                )
+                hc_log_path = _os.path.join(
+                    base_dir, 'healthcheck.log'
+                )
+            if save_report_file(
+                hc_log_path, results, args.config
+            ):
+                logger.info(
+                    "Health check report written to %s",
+                    hc_log_path,
+                )
+            else:
+                logger.warning(
+                    "Could not write health check report to %s",
+                    hc_log_path,
+                )
+            if has_critical_failure(results):
+                logger.error("=" * 60)
+                logger.error(
+                    "mod-llm-chatter HEALTH CHECK FAILED — "
+                    "bots will not chat. Fix the items marked "
+                    "[FAIL] above."
+                )
+                logger.error("=" * 60)
+                sys.exit(1)
+        except SystemExit:
+            raise
+        except Exception as exc:
+            logger.error(
+                "Health check could not run: %s", exc
+            )
+
     # Validate event registry at startup
     validate_registry()
 

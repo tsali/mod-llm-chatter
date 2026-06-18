@@ -46,6 +46,28 @@ Built from the ground up for **fantasy roleplay immersion**. Every system, perso
 
 ## Changelog
 
+### 2026-06-18 - Startup Health Check
+
+* **Automatic Setup Diagnostic**: The bridge now runs a built-in health
+  check at startup and prints a plain-language PASS/FAIL report to its
+  logs. It surfaces the most common "bots won't chat" causes — wrong
+  database credentials, a missing or leftover-placeholder API key, an
+  invalid key, or an unreachable local LLM — instead of failing
+  silently. On a critical failure the bridge logs a clear banner naming
+  the problem and the fix.
+* **Six Checks With Fix Hints**: Verifies the config loads and the module
+  is enabled, the database connection (distinguishing wrong
+  user/password, unreachable host, and wrong database name), the required
+  tables exist, the provider/API key is set and not a placeholder, and a
+  live LLM test call actually succeeds.
+* **Saved Report File**: The same report is written to
+  `logs/healthcheck.log` so it can be opened as a normal text file
+  without scraping container logs.
+* **Config Toggles**: `LLMChatter.HealthCheck.Enable` (default 1) and
+  `LLMChatter.HealthCheck.LLMProbe` (default 1) control the startup check
+  and whether it makes the live LLM test call. An optional
+  `LLMChatter.HealthCheck.LogPath` overrides the report file location.
+
 ### 2026-06-05 - Addon Chat Ingestion Filter
 
 * **Hidden Addon Traffic Ignored**: Party, proximity, and General chat
@@ -596,6 +618,45 @@ up-to-date database. Run them in date order after each
 | Raid chatter not working | Set `RaidChatter.Enable = 1`, raid group in supported instance |
 | Too much / too little chatter | Tune chance and cooldown settings in config |
 | Ollama slow responses | Try a smaller model or use a cloud provider |
+
+### Bots won't chat? Check the health report
+
+You don't need to run anything. Every time the bridge starts, it
+runs a built-in health check and prints a simple **PASS / FAIL**
+report. Just look at the bridge's startup output:
+
+- **Docker:** the bridge window, or run `docker logs ac-llm-chatter-bridge`
+- **Non-Docker:** the bridge's console output
+
+A copy of the report is also saved to
+`modules/mod-llm-chatter/logs/healthcheck.log`, so you can open it
+like a normal text file.
+
+If something is misconfigured, the report names the problem in plain
+language and tells you how to fix it. It checks:
+
+- the config file loads and the module is enabled
+- the database connection — wrong username/password, unreachable
+  host, or wrong database name
+- the required tables exist
+- the LLM provider and API key — missing key, a leftover example
+  placeholder, an invalid key, or an unreachable local model
+
+A failing check looks like this:
+
+```
+[FAIL] LLM provider config
+      The anthropic API key is still the example placeholder.
+      -> Replace the placeholder in LLMChatter.Anthropic.ApiKey with your real key.
+```
+
+Fix the items marked `[FAIL]`, restart the bridge, and check that
+every line now shows `[PASS]`. If they all pass and bots still don't
+talk, see the table above.
+
+> The check runs automatically by default. It can be turned off with
+> `LLMChatter.HealthCheck.Enable = 0`, and the live LLM test call can
+> be disabled with `LLMChatter.HealthCheck.LLMProbe = 0`.
 
 **Check logs:** `docker logs ac-llm-chatter-bridge --since 5m`
 
