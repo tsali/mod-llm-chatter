@@ -1698,6 +1698,7 @@ def run_single_reaction(
     group_id: int = None,
     delivery_policy: str = None,
     delivery_reason: str = None,
+    owner_subsystem: str = None,
 ) -> Dict[str, Any]:
     """Run shared single-message reaction pipeline.
 
@@ -1811,6 +1812,7 @@ def run_single_reaction(
             group_id=group_id,
             delivery_policy=delivery_policy,
             delivery_reason=delivery_reason,
+            owner_subsystem=owner_subsystem,
         )
     except Exception:
         logger.error(

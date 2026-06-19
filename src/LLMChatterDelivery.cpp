@@ -93,7 +93,7 @@ void DeliverPendingMessagesImpl()
             "m.npc_spawn_id, m.player_guid, "
             "m.sequence, m.event_id, e.zone_id, "
             "m.group_id, m.delivery_policy, "
-            "m.delivery_reason "
+            "m.delivery_reason, m.owner_subsystem "
             "FROM llm_chatter_messages m "
             "LEFT JOIN llm_chatter_events e "
             "ON m.event_id = e.id "
@@ -122,7 +122,7 @@ void DeliverPendingMessagesImpl()
             "m.npc_spawn_id, m.player_guid, "
             "m.sequence, m.event_id, e.zone_id, "
             "m.group_id, m.delivery_policy, "
-            "m.delivery_reason "
+            "m.delivery_reason, m.owner_subsystem "
             "FROM llm_chatter_messages m "
             "LEFT JOIN llm_chatter_events e "
             "ON m.event_id = e.id "
@@ -200,6 +200,40 @@ void DeliverPendingMessagesImpl()
         fields[13].IsNull()
             ? ""
             : fields[13].Get<std::string>();
+    std::string ownerSubsystem =
+        fields[14].IsNull()
+            ? ""
+            : fields[14].Get<std::string>();
+
+    // Master General-channel toggle. If General chatter is
+    // disabled, deliberately consume any already-queued General
+    // rows instead of speaking them. The row was claimed
+    // (delivered = 1) above, so returning here drops it without
+    // retry — flipping LLMChatter.GeneralChannel.Enable = 0 via
+    // .reload config takes effect immediately for pending rows.
+    if (channel == "general"
+        && !sLLMChatterConfig->_generalChannelEnable)
+        return;
+
+    // Master GroupChatter toggle. Party/raid channels are
+    // shared by group, raid-boss, and BG chatter, so we gate
+    // on owner_subsystem (the authoritative classifier set at
+    // insert time) rather than channel. Group-owned rows are
+    // consumed when group chatter is disabled; raid/bg rows
+    // (tagged 'raid'/'bg') are untouched. Takes effect
+    // immediately for pending rows via .reload config.
+    if (ownerSubsystem == "group"
+        && !sLLMChatterConfig->_useGroupChatter)
+        return;
+
+    // Master ProximityChatter toggle. Consume already-queued
+    // proximity rows (open-world say/msay) when proximity
+    // chatter is disabled, so flipping
+    // LLMChatter.ProximityChatter.Enable = 0 via .reload
+    // config takes effect immediately for pending rows too.
+    if (ownerSubsystem == "proximity"
+        && !sLLMChatterConfig->_proxChatterEnable)
+        return;
 
     ObjectGuid guid =
         ObjectGuid::Create<HighGuid::Player>(

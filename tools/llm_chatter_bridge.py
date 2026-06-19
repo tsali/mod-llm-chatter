@@ -741,6 +741,24 @@ def process_single_event(event, client, config):
         # Route known events via map.
         handler = EVENT_HANDLERS.get(event_type)
         if handler is not None:
+            # Master GroupChatter toggle. The C++ delivery
+            # guard is the authoritative, immediate gate
+            # (this bridge config is static until restart);
+            # this check is a secondary optimization that
+            # avoids spending LLM calls generating group
+            # messages the delivery guard would drop.
+            if (event_type.startswith('bot_group_')
+                    and str(config.get(
+                        'LLMChatter.GroupChatter.Enable',
+                        '1')).strip() != '1'):
+                cursor.execute(
+                    "UPDATE llm_chatter_events"
+                    " SET status = 'skipped'"
+                    " WHERE id = %s",
+                    (event_id,)
+                )
+                db.commit()
+                return False
             # Skip orphaned group events: if the
             # group has no traits rows (already
             # cleaned up after player logout /
@@ -1318,6 +1336,17 @@ def main():
             'LLMChatter.UseEventSystem', '1'
         ) == '1'
     )
+    # Master GroupChatter toggle (read once — bridge config
+    # is static until restart). Gates the direct periodic
+    # group producers (idle chatter, bot questions) so they
+    # do not spend LLM calls or pollute chat history when
+    # group chatter is disabled. The C++ delivery gate
+    # remains the authoritative immediate gate for output.
+    group_chatter_enabled = (
+        config.get(
+            'LLMChatter.GroupChatter.Enable', '1'
+        ) == '1'
+    )
     priority_bridge_yield = _priority_bridge_yield_enabled(
         config
     )
@@ -1421,8 +1450,10 @@ def main():
     logger.info(
         f"  GroupChatter: "
         f"{config.get('LLMChatter.GroupChatter.Enable', 1)}"
-        f"  GeneralChat: "
-        f"{config.get('LLMChatter.GeneralChat.Enable', 1)}"
+        f"  GeneralChannel: "
+        f"{config.get('LLMChatter.GeneralChannel.Enable', 1)}"
+        f"  GeneralChatReply: "
+        f"{config.get('LLMChatter.GeneralChat.PlayerReplyEnable', 1)}"
         f"  BGChatter: "
         f"{config.get('LLMChatter.BGChatter.Enable', 1)}"
         f"  RaidChatter: "
@@ -1997,6 +2028,7 @@ def main():
                 if (
                     players_online
                     and use_event_system
+                    and group_chatter_enabled
                     and not idle_chatter_future
                     and current_time
                     - last_idle_check
@@ -2016,6 +2048,7 @@ def main():
                 if (
                     players_online
                     and use_event_system
+                    and group_chatter_enabled
                     and not bot_question_future
                     and current_time
                     - last_question_check

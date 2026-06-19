@@ -346,6 +346,10 @@ def fire_subgroup_worker(
         speaker_name=bot_name,
         bot_guid=bot_guid,
         channel='party',
+        # Raid boss chatter rides the party channel but is
+        # NOT group chatter — tag so GroupChatter.Enable
+        # does not silence it.
+        owner_subsystem='raid',
         delay_seconds=2,
         event_id=event.get('id'),
         allow_emote_fallback=True,
@@ -452,6 +456,9 @@ def fire_raid_worker(
     in_bg = extra_data.get(
         'is_battleground', False)
     channel = 'battleground' if in_bg else 'raid'
+    # Boss/crowd chatter is NOT group chatter; tag so
+    # GroupChatter.Enable does not silence it.
+    owner = 'bg' if in_bg else 'raid'
 
     rw_meta = {}
     if talent_ctx:
@@ -462,6 +469,7 @@ def fire_raid_worker(
         speaker_name=bot_name,
         bot_guid=bot_guid,
         channel=channel,
+        owner_subsystem=owner,
         delay_seconds=2,
         event_id=event.get('id'),
         allow_emote_fallback=False,

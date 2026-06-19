@@ -856,6 +856,7 @@ public:
     {
         if (!sLLMChatterConfig
             || !sLLMChatterConfig->IsEnabled()
+            || !sLLMChatterConfig->_generalChannelEnable
             || !sLLMChatterConfig->_useGeneralChatReact)
             return true;
 

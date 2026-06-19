@@ -737,13 +737,46 @@ def insert_chat_message(
     group_id: int = None,
     delivery_policy: str = None,
     delivery_reason: str = None,
+    owner_subsystem: str = None,
 ):
     """Insert a message into llm_chatter_messages.
 
     Centralised helper replacing individual INSERT
     statements across the codebase. Handles the emote
     column transparently.
+
+    owner_subsystem is the authoritative classifier read by
+    C++ delivery to honor per-subsystem master toggles (e.g.
+    LLMChatter.GroupChatter.Enable). When not supplied it is
+    derived from the channel: party/raid -> 'group' (the
+    dominant producer), battleground -> 'bg', general ->
+    'general', say/msay -> 'proximity'. NON-group producers
+    that post to the shared party/raid channels (raid boss,
+    battleground crowd) MUST pass it explicitly ('raid'/'bg')
+    so they are not silenced by GroupChatter.Enable.
     """
+    if owner_subsystem is None:
+        if channel in ('party', 'raid'):
+            # Group is the dominant party/raid producer.
+            # Non-group party/raid producers (raid boss, BG)
+            # override this explicitly.
+            owner_subsystem = 'group'
+        elif channel == 'battleground':
+            owner_subsystem = 'bg'
+        elif channel == 'general':
+            owner_subsystem = 'general'
+        elif channel in ('say', 'msay'):
+            owner_subsystem = 'proximity'
+        elif channel == 'yell':
+            # Zone-intrusion / world yells (gated by
+            # ZoneIntrusion.Enable, not GroupChatter).
+            owner_subsystem = 'zone'
+        else:
+            # Unknown channel: never auto-classify as group,
+            # so an untagged new channel is not silenced by
+            # GroupChatter.Enable.
+            owner_subsystem = 'other'
+
     final_delay = delay_seconds
     if (
         config is not None
@@ -764,10 +797,11 @@ def insert_chat_message(
         INSERT INTO llm_chatter_messages
         (event_id, queue_id, sequence, bot_guid,
          bot_name, message, emote, npc_spawn_id,
-         player_guid, channel, delivered, deliver_at,
+         player_guid, channel, owner_subsystem,
+         delivered, deliver_at,
          group_id, delivery_policy, delivery_reason)
         VALUES (
-            %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, 0,
+            %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, 0,
             DATE_ADD(NOW(), INTERVAL %s SECOND),
             %s, %s, %s
         )
@@ -775,7 +809,7 @@ def insert_chat_message(
         event_id, queue_id, sequence,
         bot_guid, bot_name, message,
         validate_emote(emote), npc_spawn_id,
-        player_guid, channel,
+        player_guid, channel, owner_subsystem,
         int(final_delay),
         group_id, delivery_policy, delivery_reason,
     ))

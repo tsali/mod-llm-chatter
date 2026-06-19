@@ -262,6 +262,10 @@ def _try_carrier_self_message(
         speaker_name=name,
         bot_guid=guid,
         channel='party',
+        # BG chatter rides the party channel but is NOT group
+        # chatter — tag so GroupChatter.Enable does not
+        # silence it.
+        owner_subsystem='bg',
         delay_seconds=2,
         event_id=event_id,
         allow_emote_fallback=True,

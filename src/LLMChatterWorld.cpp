@@ -71,7 +71,8 @@ static void QueueEvent(
     const std::string& extraData)
 {
     if (!sLLMChatterConfig->IsEnabled()
-        || !sLLMChatterConfig->_useEventSystem)
+        || !sLLMChatterConfig->_useEventSystem
+        || !sLLMChatterConfig->_generalChannelEnable)
         return;
 
     if (eventType == "weather_ambient"

@@ -487,9 +487,14 @@ void LLMChatterConfig::LoadConfig()
             "LLMChatter.GroupChatter."
             "PreCacheFallbackToLive", true);
 
+    // General channel master toggle — one switch to disable all
+    // General-channel chatter (ambient, world events, player replies)
+    _generalChannelEnable = GetChatterOption<bool>(
+        "LLMChatter.GeneralChannel.Enable", true);
+
     // General chat reactions
     _useGeneralChatReact = GetChatterOption<bool>(
-        "LLMChatter.GeneralChat.Enable", true);
+        "LLMChatter.GeneralChat.PlayerReplyEnable", true);
     _generalChatChance = GetChatterOption<uint32>(
         "LLMChatter.GeneralChat.ReactionChance", 40);
     _generalChatQuestionChance = GetChatterOption<uint32>(

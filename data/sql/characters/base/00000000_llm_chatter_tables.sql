@@ -156,6 +156,16 @@ CREATE TABLE IF NOT EXISTS `llm_chatter_messages` (
     `delivery_policy` VARCHAR(24) DEFAULT NULL,
     `delivery_reason` VARCHAR(64) DEFAULT NULL,
     `channel` VARCHAR(32) NOT NULL DEFAULT 'general',
+    -- Owning subsystem for this row. Authoritative classifier
+    -- used by C++ delivery to honor per-subsystem master
+    -- toggles (e.g. LLMChatter.GroupChatter.Enable). Values:
+    -- 'group' (party/raid group chatter — the default),
+    -- 'raid' (PvE raid boss chatter), 'bg' (battleground),
+    -- 'general' (General channel), 'proximity' (open-world
+    -- say/msay). Defaults to 'group' because party/raid is the
+    -- dominant producer; non-group party producers set it
+    -- explicitly. See insert_chat_message() in chatter_db.py.
+    `owner_subsystem` VARCHAR(16) NOT NULL DEFAULT 'group',
     `delivered` TINYINT(1) NOT NULL DEFAULT 0,
     `deliver_at` TIMESTAMP NULL DEFAULT NULL,
     `delivered_at` TIMESTAMP NULL DEFAULT NULL,

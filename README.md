@@ -46,6 +46,43 @@ Built from the ground up for **fantasy roleplay immersion**. Every system, perso
 
 ## Changelog
 
+### 2026-06-19 - Chat-Type Master Toggles & Subsystem Classifier
+
+* **General channel master switch**: New
+  `LLMChatter.GeneralChannel.Enable` (default 1) silences **all**
+  General-channel chatter with a single value — ambient remarks, world
+  event reactions (weather, holidays, day/night — including the ones
+  that normally always fire), and replies to player General messages.
+  It takes effect immediately on `.reload config`, and also stops any
+  General messages already queued for delivery, not just new ones.
+* **Config key renamed (action may be required)**:
+  `LLMChatter.GeneralChat.Enable` is now
+  `LLMChatter.GeneralChat.PlayerReplyEnable`. It only ever governed
+  replies to player General messages; the new name makes that clear.
+  The old key is no longer read — if your config sets
+  `LLMChatter.GeneralChat.Enable`, rename it. To turn off *everything*
+  in General at once, use `LLMChatter.GeneralChannel.Enable` instead.
+* **GroupChatter toggle made authoritative**:
+  `LLMChatter.GroupChatter.Enable = 0` now also silences
+  emote-triggered party/raid reactions and drains already-queued group
+  messages, and the bridge stops attempting idle chatter and bot
+  questions while it is off. Raid-boss and Battleground chatter (which
+  share the party/raid channels) are unaffected. The solo NPC
+  emote-mirror stays governed by `LLMChatter.EmoteReactions.Enable`.
+* **Proximity toggle made authoritative**:
+  `LLMChatter.ProximityChatter.Enable = 0` now also drains already-
+  queued open-world say/msay lines, matching the other toggles.
+* **New `owner_subsystem` classifier**: Each row in
+  `llm_chatter_messages` is tagged with its owning subsystem (group,
+  raid, bg, general, proximity, ...). This lets the delivery layer
+  honor each master toggle even for in-flight messages without
+  affecting the other subsystems that share the same chat channel.
+* **Database Migration**: This update **adds a database column**. If
+  upgrading, apply
+  `data/sql/characters/updates/20260619_owner_subsystem.sql` (it is
+  idempotent and also runs automatically when worldserver starts).
+  Fresh installs already have the column from the base schema.
+
 ### 2026-06-18 - Startup Health Check
 
 * **Automatic Setup Diagnostic**: The bridge now runs a built-in health
@@ -579,6 +616,21 @@ docker exec -i ac-database mysql -uroot -ppassword acore_characters < \
 docker exec -i ac-database mysql -uroot -ppassword acore_characters < \
   modules/mod-llm-chatter/data/sql/characters/updates/20260416_bot_backstory.sql
 
+docker exec -i ac-database mysql -uroot -ppassword acore_characters < \
+  modules/mod-llm-chatter/data/sql/characters/updates/20260508_group_travel_state.sql
+
+docker exec -i ac-database mysql -uroot -ppassword acore_characters < \
+  modules/mod-llm-chatter/data/sql/characters/updates/20260508_party_chat_pacing.sql
+
+docker exec -i ac-database mysql -uroot -ppassword acore_characters < \
+  modules/mod-llm-chatter/data/sql/characters/updates/20260511_general_to_party_reaction.sql
+
+docker exec -i ac-database mysql -uroot -ppassword acore_characters < \
+  modules/mod-llm-chatter/data/sql/characters/updates/20260601_guild_chat.sql
+
+docker exec -i ac-database mysql -uroot -ppassword acore_characters < \
+  modules/mod-llm-chatter/data/sql/characters/updates/20260619_owner_subsystem.sql
+
 # Non-Docker
 mysql -uroot -ppassword acore_characters < \
   data/sql/characters/updates/20260320_bot_memory_system.sql
@@ -600,6 +652,21 @@ mysql -uroot -ppassword acore_characters < \
 
 mysql -uroot -ppassword acore_characters < \
   data/sql/characters/updates/20260416_bot_backstory.sql
+
+mysql -uroot -ppassword acore_characters < \
+  data/sql/characters/updates/20260508_group_travel_state.sql
+
+mysql -uroot -ppassword acore_characters < \
+  data/sql/characters/updates/20260508_party_chat_pacing.sql
+
+mysql -uroot -ppassword acore_characters < \
+  data/sql/characters/updates/20260511_general_to_party_reaction.sql
+
+mysql -uroot -ppassword acore_characters < \
+  data/sql/characters/updates/20260601_guild_chat.sql
+
+mysql -uroot -ppassword acore_characters < \
+  data/sql/characters/updates/20260619_owner_subsystem.sql
 ```
 
 Migrations are idempotent — safe to run on an already

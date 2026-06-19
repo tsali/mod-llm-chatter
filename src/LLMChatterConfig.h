@@ -212,6 +212,10 @@ public:
     uint32 _preCacheGeneratePerLoop;
     bool _preCacheFallbackToLive;
 
+    // General channel master toggle (all General-channel chatter:
+    // ambient, world events, and player-message replies)
+    bool _generalChannelEnable;
+
     // General chat reactions
     bool _useGeneralChatReact;
     uint32 _generalChatChance;

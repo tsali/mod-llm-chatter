@@ -2177,6 +2177,9 @@ void HandleGroupPlayerTextEmoteImpl(
     // Creature mirror reactions are independent from
     // group observer chatter, so allow them even when
     // the player is solo or has no nearby bot audience.
+    // They are governed by EmoteReactions.Enable only —
+    // NOT GroupChatter.Enable — because no party/raid
+    // output is involved.
     if (tgtType == EMOTE_TGT_CREATURE
         && cachedTargetCreature)
         HandleEmoteAtCreature(
@@ -2184,6 +2187,12 @@ void HandleGroupPlayerTextEmoteImpl(
             textEmote);
 
     if (!group || !GroupHasRealPlayer(group))
+        return;
+
+    // Everything below produces party/raid output
+    // (directed bot reactions, observer chatter), so it is
+    // gated by the GroupChatter master toggle.
+    if (!sLLMChatterConfig->_useGroupChatter)
         return;
 
     constexpr float RANGE = 40.0f;

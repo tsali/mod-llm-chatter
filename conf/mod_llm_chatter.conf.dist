@@ -484,11 +484,28 @@ LLMChatter.Language = GB
 LLMChatter.GroupChatter.Enable = 1
 
 #
-#   LLMChatter.GeneralChat.Enable
-#       Enable bot reactions to player messages in General channel
+#   LLMChatter.GeneralChannel.Enable
+#       Master switch for ALL General-channel chatter. When 0, bots
+#       produce nothing in the General channel: no ambient chatter
+#       (TriggerChance), no world-event reactions (weather, holidays,
+#       day/night, transports, minor events — including the ones that
+#       normally always fire), and no replies to player messages.
+#       Set this to 0 to silence the General channel completely with a
+#       single value. Leave at 1 to use the finer-grained toggles below.
 #       Default: 1
 #
-LLMChatter.GeneralChat.Enable = 1
+LLMChatter.GeneralChannel.Enable = 1
+
+#
+#   LLMChatter.GeneralChat.PlayerReplyEnable
+#       Enable bot reactions/replies to PLAYER messages in the General
+#       channel. This only governs responses to what players type; it
+#       does not affect ambient chatter or world-event reactions. To
+#       turn off everything in General at once, use
+#       LLMChatter.GeneralChannel.Enable above instead.
+#       Default: 1
+#
+LLMChatter.GeneralChat.PlayerReplyEnable = 1
 
 #
 #   LLMChatter.BGChatter.Enable

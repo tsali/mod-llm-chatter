@@ -94,7 +94,8 @@ static void QueueAmbientEvent(
     const std::string& extraData)
 {
     if (!sLLMChatterConfig->IsEnabled()
-        || !sLLMChatterConfig->_useEventSystem)
+        || !sLLMChatterConfig->_useEventSystem
+        || !sLLMChatterConfig->_generalChannelEnable)
         return;
 
     if (eventType == "weather_ambient"
@@ -1014,6 +1015,9 @@ static void QueueChatterRequest(
 
 void TryTriggerChatter()
 {
+    if (!sLLMChatterConfig->_generalChannelEnable)
+        return;
+
     std::vector<uint32> validZones =
         GetZonesWithRealPlayers();
     if (validZones.empty())
