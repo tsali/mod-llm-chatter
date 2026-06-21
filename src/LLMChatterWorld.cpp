@@ -13,6 +13,8 @@
 
 #include "DatabaseEnv.h"
 #include "Group.h"
+#include "Guild.h"
+#include "GuildMgr.h"
 #include "Log.h"
 #include "MapMgr.h"
 #include "ObjectAccessor.h"
@@ -328,6 +330,7 @@ public:
         _lastQuestFlushTime = 0;
         _lastGroupJoinFlushTime = 0;
         _lastRaidMoraleTime = 0;
+        _lastGuildChatterTime = 0;
         _lastTimePeriod = "";
     }
 
@@ -439,6 +442,16 @@ public:
             _lastRaidMoraleTime = now;
             CheckRaidIdleMorale();
         }
+
+        if (sLLMChatterConfig->_guildChatterEnable
+            && now - _lastGuildChatterTime
+                >= sLLMChatterConfig
+                    ->_guildChatterCooldown
+                    * 1000)
+        {
+            _lastGuildChatterTime = now;
+            CheckGuildIdleChatter();
+        }
     }
 
 private:
@@ -451,6 +464,7 @@ private:
     uint32 _lastQuestFlushTime = 0;
     uint32 _lastGroupJoinFlushTime = 0;
     uint32 _lastRaidMoraleTime = 0;
+    uint32 _lastGuildChatterTime = 0;
     std::string _lastTimePeriod;
 
     void CheckDayNightTransition()
@@ -600,6 +614,144 @@ private:
     void CheckNearbyGameObjects()
     {
         ::CheckNearbyGameObjects();
+    }
+
+    void CheckGuildIdleChatter()
+    {
+        static std::unordered_map<uint32, time_t>
+            guildCooldowns;
+
+        time_t nowSec = time(nullptr);
+
+        // Guild chatter is only worthwhile when a real
+        // player is online to read it, so first collect
+        // the guilds that currently have a human member
+        // online.
+        std::set<uint32> activeGuilds;
+        WorldSessionMgr::SessionMap const& sessions =
+            sWorldSessionMgr->GetAllSessions();
+        for (auto const& pair : sessions)
+        {
+            WorldSession* session = pair.second;
+            if (!session || session->PlayerLoading())
+                continue;
+
+            Player* player = session->GetPlayer();
+            if (!player || !player->IsInWorld()
+                || IsPlayerBot(player))
+                continue;
+
+            if (uint32 gid = player->GetGuildId())
+                activeGuilds.insert(gid);
+        }
+        if (activeGuilds.empty())
+            return;
+
+        // Bucket online, idle bot members of those guilds.
+        std::unordered_map<uint32,
+            std::vector<Player*>> byGuild;
+        PlayerBotMap allBots =
+            sRandomPlayerbotMgr.GetAllBots();
+        for (auto const& pair : allBots)
+        {
+            Player* bot = pair.second;
+            if (!bot || !bot->IsInWorld()
+                || !bot->IsAlive())
+                continue;
+
+            WorldSession* session = bot->GetSession();
+            if (session && session->PlayerLoading())
+                continue;
+
+            if (bot->IsInCombat())
+                continue;
+
+            uint32 guildId = bot->GetGuildId();
+            if (!guildId || !activeGuilds.count(guildId))
+                continue;
+
+            byGuild[guildId].push_back(bot);
+        }
+
+        for (uint32 guildId : activeGuilds)
+        {
+            auto it = byGuild.find(guildId);
+            if (it == byGuild.end())
+                continue;
+
+            std::vector<Player*> const& members =
+                it->second;
+            if (members.empty())
+                continue;
+
+            auto cdIt = guildCooldowns.find(guildId);
+            if (cdIt != guildCooldowns.end()
+                && nowSec - cdIt->second
+                    < (time_t)sLLMChatterConfig
+                          ->_guildChatterCooldown)
+                continue;
+
+            if (urand(1, 100)
+                > sLLMChatterConfig->_guildChatterChance)
+                continue;
+
+            Player* speaker =
+                members[urand(0, members.size() - 1)];
+
+            Guild* guild =
+                sGuildMgr->GetGuildById(guildId);
+            std::string guildName =
+                guild ? guild->GetName() : "the guild";
+
+            // Collect a few online guildmate names for
+            // prompt context.
+            std::string mates;
+            uint32 added = 0;
+            for (Player* m : members)
+            {
+                if (m == speaker)
+                    continue;
+                if (added)
+                    mates += ", ";
+                mates += m->GetName();
+                if (++added >= 4)
+                    break;
+            }
+
+            std::string json = fmt::format(
+                R"({{"guild_name":"{}",)"
+                R"("speaker_name":"{}",)"
+                R"("guildmates":"{}",)"
+                R"("zone_id":{}}})",
+                JsonEscape(guildName),
+                JsonEscape(speaker->GetName()),
+                JsonEscape(mates),
+                speaker->GetZoneId());
+
+            std::string cooldownKey =
+                "guild_idle_"
+                + std::to_string(guildId);
+
+            QueueChatterEvent(
+                "guild_idle_chatter",
+                "global",
+                speaker->GetZoneId(),
+                speaker->GetMapId(),
+                GetChatterEventPriority(
+                    "guild_idle_chatter"),
+                cooldownKey,
+                speaker->GetGUID().GetCounter(),
+                speaker->GetName(),
+                0, "", 0,
+                EscapeString(json),
+                GetReactionDelaySeconds(
+                    "guild_idle_chatter"),
+                sLLMChatterConfig
+                    ->_eventExpirationSeconds,
+                false);
+
+            guildCooldowns[guildId] = nowSec;
+        }
     }
 
     void CheckRaidIdleMorale()

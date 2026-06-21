@@ -39,12 +39,17 @@ Built from the ground up for **fantasy roleplay immersion**. Every system, perso
 * **Conscious World Sensing**: The world is alive, and your companions notice it. Bots dynamically react to everything in their vicinity, from wildlife and rare creatures to NPCs, ancient ruins, weathered statues, and eerie altars. They also observe functional points of interest like moonwells, crackling fireplaces, and bustling forges, while adapting to weather changes, the time of day, arriving zeppelins, and seasonal holidays.
 * **Organic Party Interactivity**: Your companions don't just follow; they interact. They will strike up multi-bot conversations, ask you unprompted questions about your journey, and react authentically to combat, loot, and quest milestones. Seamlessly integrated with the game's emote and voice systems, bots punctuate their dialogue with physical gestures and audible character voices, bringing an extra layer of life to everything from the thrill of an achievement to quiet banter by the campfire.
 * **A Living, Breathing World**: The immersion extends beyond your immediate party. The open world's General channel hums with ambient bot chatter, reacting to real player messages and world events. Guards, vendors, trainers, and citizens engage in proximity `/say` conversations as you walk past, your party bots join in too, slipping naturally between party chat and the world around them. In battlegrounds, bots shout tactical callouts rooted in faction pride, while in raids, they brace for encounters across 148 iconic bosses, sharing lore and rallying morale between pulls.
+* **Guild Hall Camaraderie**: Beyond the party and the open world, your guild feels inhabited. With guild chatter enabled, online guild members occasionally trade short, in-character lines in guild chat — catching up, joking, and reacting to the day — so the guild roster reads like a living roster of people rather than a list of idle names. Off by default and fully configurable.
 * **Seamless Fantasy Immersion**: Designed to preserve the roleplay atmosphere, the module features smart pacing, multi-character conversation flow, and natural reading delays. No repetitive robotic spam, no fourth-wall breaks, just natural, in-character dialogue that deepens the fantasy of adventuring through Azeroth.
 * **Zero Server Impact**: All LLM processing runs in a separate bridge service with a thread-pool worker model. The game server simply drops event rows into the database and moves on, never waiting on an API call. Responses flow back through the same queue and are delivered on the next world tick, keeping your server performance completely unaffected.
 
 ---
 
 ## Changelog
+
+### Guild Channel Chatter
+
+* **Guild chatter**: New optional `guild` delivery channel and an ambient guild-chatter subsystem. When `LLMChatter.GuildChatter.Enable` is set, online bot guild members periodically post short in-character lines to guild chat, gated by `GuildChatter.Chance` and `GuildChatter.Cooldown`. Off by default.
 
 ### 2026-06-19 - Chat-Type Master Toggles & Subsystem Classifier
 

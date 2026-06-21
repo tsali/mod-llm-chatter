@@ -231,7 +231,7 @@ uint32 RollConfiguredDelay(
         sLLMChatterConfig->*maxMember);
 }
 
-constexpr std::array<EventPriorityRule, 33>
+constexpr std::array<EventPriorityRule, 34>
     kTierPriorityRules = {{
         {"bot_group_combat",        PRIORITY_CRITICAL},
         {"bot_group_spell_cast",    PRIORITY_CRITICAL},
@@ -258,6 +258,7 @@ constexpr std::array<EventPriorityRule, 33>
         {"player_enters_zone",      PRIORITY_HIGH},
         {"bg_idle_chatter",         PRIORITY_FILLER},
         {"raid_idle_morale",        PRIORITY_FILLER},
+        {"guild_idle_chatter",      PRIORITY_FILLER},
         {"weather_ambient",         PRIORITY_FILLER},
         {"minor_event",             PRIORITY_FILLER},
         {"day_night_transition",    PRIORITY_FILLER},
@@ -275,7 +276,7 @@ constexpr std::array<PredicatePriorityRule, 1>
         {IsStateCalloutEventType, PRIORITY_CRITICAL},
     }};
 
-constexpr std::array<EventPriorityRule, 21>
+constexpr std::array<EventPriorityRule, 22>
     kLegacyPriorityRules = {{
         {"player_general_msg",       8},
         {"day_night_transition",     7},
@@ -293,6 +294,7 @@ constexpr std::array<EventPriorityRule, 21>
         {"bot_group_join",           0},
         {"bot_group_join_batch",     0},
         {"raid_idle_morale",         0},
+        {"guild_idle_chatter",       0},
         {"proximity_say",           0},
         {"proximity_conversation",  0},
         {"proximity_reply",         1},

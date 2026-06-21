@@ -1506,6 +1506,42 @@ LLMChatter.RaidChatter.MoraleChance = 30
 LLMChatter.RaidChatter.MoraleCooldown = 60
 
 #
+#   LLMChatter.GuildChatter.Enable
+#       Ambient guild-channel chatter. When enabled,
+#       online bot guild members occasionally post a
+#       short in-character line to guild chat. Off by
+#       default so existing setups are unaffected.
+#       Default: 0
+#
+LLMChatter.GuildChatter.Enable = 0
+
+#
+#   LLMChatter.GuildChatter.Chance
+#       Percent chance (1-100) that an eligible guild
+#       produces a line on each check.
+#       Default: 15
+#
+LLMChatter.GuildChatter.Chance = 15
+
+#
+#   LLMChatter.GuildChatter.Cooldown
+#       Minimum seconds between guild chatter lines for
+#       the same guild.
+#       Default: 300
+#
+LLMChatter.GuildChatter.Cooldown = 300
+
+#
+#   LLMChatter.GuildChatter.MaxTokens
+#       Output token budget per guild line. Reasoning
+#       models spend part of this budget thinking before
+#       emitting text, so raise it (e.g. 2000-3000) if
+#       you use one and see empty replies.
+#       Default: 200
+#
+LLMChatter.GuildChatter.MaxTokens = 200
+
+#
 #   LLMChatter.RaidChatter.BattleCryChance
 #       Percent chance (0-100) that a raid-wide battle cry
 #       fires when engaging a boss or elite in a raid instance.

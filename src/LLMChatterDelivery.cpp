@@ -3,6 +3,7 @@
  */
 
 #include "LLMChatterConfig.h"
+#include "Guild.h"
 #include "LLMChatterDelivery.h"
 #include "LLMChatterProximity.h"
 #include "LLMChatterShared.h"
@@ -527,6 +528,17 @@ void DeliverPendingMessagesImpl()
             else if (channel == "say")
             {
                 sent = ai->Say(processedMessage);
+            }
+            else if (channel == "guild")
+            {
+                if (Guild* g = bot->GetGuild())
+                {
+                    g->BroadcastToGuild(
+                        bot->GetSession(), false,
+                        processedMessage.c_str(),
+                        LANG_UNIVERSAL);
+                    sent = true;
+                }
             }
             else if (channel == "yell")
             {
