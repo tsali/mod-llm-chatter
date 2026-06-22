@@ -149,6 +149,14 @@ def _build_guild_prompt(
                 "elsewhere will read it."
             )
     lines.append(
+        "Stay fully in character — you ARE this person "
+        "in Azeroth. No fourth-wall breaks and no "
+        "out-of-character or game-mechanic talk (no DPS "
+        "meters, rotations, addons, or references to the "
+        "player behind the screen). Draw on your race, "
+        "class and surroundings."
+    )
+    lines.append(
         "Write ONE short, casual line for guild "
         "chat, in character, the way a real person "
         "playing WoW would chat with their guild. "
