@@ -19,6 +19,7 @@ from chatter_shared import (
     get_class_name,
     get_gender_label,
     get_race_name,
+    get_zone_name,
     parse_extra_data,
 )
 from chatter_text import (
@@ -104,6 +105,7 @@ def _build_guild_prompt(
     guild_name: str,
     guildmates: str,
     config: Optional[Dict] = None,
+    zone_id: int = 0,
 ) -> str:
     identity = build_bot_identity_with_level(
         speaker_name,
@@ -136,6 +138,16 @@ def _build_guild_prompt(
             f"{guildmates}."
         )
 
+    if zone_id:
+        zone = get_zone_name(zone_id)
+        if zone:
+            lines.append(
+                f"You are currently in {zone}. You may "
+                "naturally mention what you are doing there "
+                "(questing, leveling, traveling) or react to "
+                "it — this is guild chat, so guildmates "
+                "elsewhere will read it."
+            )
     lines.append(
         "Write ONE short, casual line for guild "
         "chat, in character, the way a real person "
@@ -180,9 +192,10 @@ def process_guild_idle_chatter_event(
         _mark_event(db, event_id, 'skipped')
         return False
 
+    zone_id = int(extra.get('zone_id', 0) or 0)
     prompt = _build_guild_prompt(
         speaker_name, speaker, guild_name,
-        guildmates, config,
+        guildmates, config, zone_id=zone_id,
     )
 
     max_tokens = int(config.get(
