@@ -252,6 +252,7 @@ public:
     bool _guildChatterEnable{false};
     uint32 _guildChatterChance{15};
     uint32 _guildChatterCooldown{300};
+    uint32 _guildChatterScanInterval{30};
 
     // Zone intrusion alerts
     bool _zoneIntrusionEnable;

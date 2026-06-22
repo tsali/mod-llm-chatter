@@ -443,10 +443,22 @@ public:
             CheckRaidIdleMorale();
         }
 
-        if (sLLMChatterConfig->_guildChatterEnable
+        // Scan cadence (ScanInterval, default
+        // 30s) is intentionally
+        // separate from the per-guild cooldown,
+        // which is enforced inside
+        // CheckGuildIdleChatter via guildCooldowns.
+        // Using the full cooldown as the scan
+        // interval caused long silent windows (a
+        // player logging in just after an empty
+        // scan waited a whole cooldown). Also gated
+        // on _useEventSystem to match the other
+        // event producers.
+        if (sLLMChatterConfig->_useEventSystem
+            && sLLMChatterConfig->_guildChatterEnable
             && now - _lastGuildChatterTime
                 >= sLLMChatterConfig
-                    ->_guildChatterCooldown
+                    ->_guildChatterScanInterval
                     * 1000)
         {
             _lastGuildChatterTime = now;

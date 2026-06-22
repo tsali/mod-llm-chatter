@@ -531,13 +531,27 @@ void DeliverPendingMessagesImpl()
             }
             else if (channel == "guild")
             {
-                if (Guild* g = bot->GetGuild())
+                // off means off: do not deliver
+                // guild chatter if the feature was
+                // disabled after the event queued.
+                if (!sLLMChatterConfig
+                         ->_guildChatterEnable)
                 {
-                    g->BroadcastToGuild(
-                        bot->GetSession(), false,
-                        processedMessage.c_str(),
-                        LANG_UNIVERSAL);
-                    sent = true;
+                }
+                else if (Guild* g = bot->GetGuild())
+                {
+                    // defensive: never call
+                    // BroadcastToGuild without a
+                    // live session.
+                    if (WorldSession* session
+                            = bot->GetSession())
+                    {
+                        g->BroadcastToGuild(
+                            session, false,
+                            processedMessage.c_str(),
+                            LANG_UNIVERSAL);
+                        sent = true;
+                    }
                 }
             }
             else if (channel == "yell")

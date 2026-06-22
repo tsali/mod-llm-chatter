@@ -1532,6 +1532,17 @@ LLMChatter.GuildChatter.Chance = 15
 LLMChatter.GuildChatter.Cooldown = 300
 
 #
+#   LLMChatter.GuildChatter.ScanInterval
+#       Seconds between world scans for eligible
+#       guilds. Kept separate from Cooldown so
+#       player-gating does not cause long silent
+#       windows: scanning is cheap, the per-guild
+#       Cooldown still limits actual lines.
+#       Default: 30
+#
+LLMChatter.GuildChatter.ScanInterval = 30
+
+#
 #   LLMChatter.GuildChatter.MaxTokens
 #       Output token budget per guild line. Reasoning
 #       models spend part of this budget thinking before

@@ -584,6 +584,10 @@ void LLMChatterConfig::LoadConfig()
         GetChatterOption<uint32>(
             "LLMChatter.GuildChatter."
             "Cooldown", 300);
+    _guildChatterScanInterval =
+        GetChatterOption<uint32>(
+            "LLMChatter.GuildChatter."
+            "ScanInterval", 30);
 
     // Zone intrusion alerts
     _zoneIntrusionEnable =
