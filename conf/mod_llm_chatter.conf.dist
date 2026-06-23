@@ -1506,6 +1506,11 @@ LLMChatter.RaidChatter.MoraleChance = 30
 LLMChatter.RaidChatter.MoraleCooldown = 60
 
 #
+###############################################################################
+# GUILD CHATTER TUNING [SERVER] - read by the worldserver module; these keys take
+# effect immediately for pending rows via `.reload config`.
+###############################################################################
+#
 #   LLMChatter.GuildChatter.Enable
 #       Ambient guild-channel chatter. When enabled,
 #       online bot guild members occasionally post a
@@ -1542,6 +1547,12 @@ LLMChatter.GuildChatter.Cooldown = 300
 #
 LLMChatter.GuildChatter.ScanInterval = 30
 
+#
+###############################################################################
+# GUILD CHATTER PROMPT TUNING [BRIDGE] - read by the Python chatter bridge, NOT the
+# worldserver. `.reload config` does NOT affect this key; restart the
+# ac-llm-chatter-bridge container to apply changes.
+###############################################################################
 #
 #   LLMChatter.GuildChatter.MaxTokens
 #       Output token budget per guild line. Reasoning
