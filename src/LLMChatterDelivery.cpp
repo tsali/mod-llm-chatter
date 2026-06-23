@@ -236,6 +236,15 @@ void DeliverPendingMessagesImpl()
         && !sLLMChatterConfig->_proxChatterEnable)
         return;
 
+    // Master GuildChatter toggle. Consume already-queued
+    // guild rows when guild chatter is disabled, so flipping
+    // LLMChatter.GuildChatter.Enable = 0 takes effect
+    // immediately for pending rows (otherwise the generic
+    // retry path resets delivered = 0 and retries forever).
+    if (ownerSubsystem == "guild"
+        && !sLLMChatterConfig->_guildChatterEnable)
+        return;
+
     ObjectGuid guid =
         ObjectGuid::Create<HighGuid::Player>(
             botGuid);
@@ -531,27 +540,26 @@ void DeliverPendingMessagesImpl()
             }
             else if (channel == "guild")
             {
-                // off means off: do not deliver
-                // guild chatter if the feature was
-                // disabled after the event queued.
-                if (!sLLMChatterConfig
-                         ->_guildChatterEnable)
+                // The master-toggle guard above already
+                // consumes guild rows when the feature is
+                // off, so we only reach here when enabled.
+                Guild* guild = bot->GetGuild();
+                WorldSession* session =
+                    bot->GetSession();
+
+                if (guild && session)
                 {
+                    guild->BroadcastToGuild(
+                        session, false,
+                        processedMessage.c_str(),
+                        LANG_UNIVERSAL);
+                    sent = true;
                 }
-                else if (Guild* g = bot->GetGuild())
+                else
                 {
-                    // defensive: never call
-                    // BroadcastToGuild without a
-                    // live session.
-                    if (WorldSession* session
-                            = bot->GetSession())
-                    {
-                        g->BroadcastToGuild(
-                            session, false,
-                            processedMessage.c_str(),
-                            LANG_UNIVERSAL);
-                        sent = true;
-                    }
+                    // a missing guild/session is not
+                    // transient -> do not retry forever.
+                    botUnavailable = true;
                 }
             }
             else if (channel == "yell")
