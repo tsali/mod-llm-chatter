@@ -78,7 +78,8 @@ CREATE TABLE IF NOT EXISTS `llm_chatter_events` (
         'proximity_player_say',
         'proximity_player_conversation',
         'bot_backstory_regen',
-        'bot_tone_regen'
+        'bot_tone_regen',
+        'guild_idle_chatter'
     ) NOT NULL,
     `event_scope` ENUM('global', 'zone', 'player') NOT NULL DEFAULT 'zone',
     `zone_id` INT UNSIGNED DEFAULT NULL,

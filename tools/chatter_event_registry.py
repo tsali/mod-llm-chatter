@@ -844,6 +844,22 @@ EVENT_REGISTRY: Dict[str, EventSpec] = {
         },
     ),
 
+    'guild_idle_chatter': EventSpec(
+        handler_module='chatter_guild',
+        handler_func=(
+            'process_guild_idle_chatter_event'
+        ),
+        producer='LLMChatterWorld.cpp',
+        priority='filler',
+        description='Ambient guild-channel chatter',
+        payload_fields={
+            'guild_name': (str, True),
+            'speaker_name': (str, True),
+            'guildmates': (str, False),
+            'zone_id': (int, True),
+        },
+    ),
+
     # -- World events (chatter_world_events) ------
 
     'transport_arrives': EventSpec(

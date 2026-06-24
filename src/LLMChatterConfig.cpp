@@ -573,6 +573,22 @@ void LLMChatterConfig::LoadConfig()
             "LLMChatter.RaidChatter."
             "MoraleCooldown", 120);
 
+    // Guild chatter (ambient guild-channel banter)
+    _guildChatterEnable = GetChatterOption<bool>(
+        "LLMChatter.GuildChatter.Enable", false);
+    _guildChatterChance =
+        GetChatterOption<uint32>(
+            "LLMChatter.GuildChatter."
+            "Chance", 15);
+    _guildChatterCooldown =
+        GetChatterOption<uint32>(
+            "LLMChatter.GuildChatter."
+            "Cooldown", 300);
+    _guildChatterScanInterval =
+        GetChatterOption<uint32>(
+            "LLMChatter.GuildChatter."
+            "ScanInterval", 30);
+
     // Zone intrusion alerts
     _zoneIntrusionEnable =
         GetChatterOption<bool>(

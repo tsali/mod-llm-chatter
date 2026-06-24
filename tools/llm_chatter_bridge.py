@@ -358,6 +358,7 @@ def fetch_pending_events(db, config, max_count):
               OR e.event_type = 'player_general_msg'
               OR e.event_type = 'player_enters_zone'
               OR e.event_type LIKE 'proximity_%%'
+              OR e.event_type = 'guild_idle_chatter'
               OR (
                   EXISTS (
                       SELECT 1 FROM characters c
