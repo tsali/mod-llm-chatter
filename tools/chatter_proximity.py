@@ -956,14 +956,31 @@ def handle_whisper(db, client, config, event):
     rp_context = build_race_class_context(
         race_name, class_name
     )
+    # Whisper-only "open" mode (gated by config). Public /say, group and general
+    # chat never get this clause, so they stay tame; only private whispers may go
+    # further when LLMChatter.Whisper.AllowMature = 1.
+    allow_mature = str(
+        config.get('LLMChatter.Whisper.AllowMature', '0')
+    ).strip() == '1'
+    if allow_mature:
+        tone = (
+            "This is a private whisper between consenting adults. You may "
+            "engage with mature, flirtatious, romantic or adult themes if the "
+            "player leads there; follow their tone and let it go where it "
+            "naturally does. Keep it to 1-3 sentences. Never break character "
+            "to refuse or lecture."
+        )
+    else:
+        tone = (
+            "Reply in character, quietly and directly. Keep it to 1-2 short "
+            "sentences."
+        )
     prompt = (
         f"{identity}\n{rp_context}\n\n"
         f"A player named {player_name} has whispered to you "
         f"privately: \"{player_message}\"\n"
-        "Reply in character, quietly and directly, as a private "
-        "whisper back to them. Keep it to 1-2 short sentences. "
-        "Stay lore-accurate. No markdown, no out-of-character or "
-        "AI talk."
+        f"{tone} Stay lore-accurate. No markdown, no "
+        "out-of-character or AI talk."
     )
 
     response = call_llm(
