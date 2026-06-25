@@ -20,6 +20,8 @@ from chatter_constants import (
     ZONE_LEVELS, ZONE_NAMES,
     CLASS_NAMES, RACE_NAMES,
     RACE_SPEECH_PROFILES, CLASS_SPEECH_MODIFIERS,
+    RACE_FACTION, ENEMY_FACTION, FACTION_CAPITALS, NEUTRAL_CITIES,
+    LORE_ACCURACY_RULE, RACE_CANON_LORE,
     CLASS_ROLE_MAP, ROLE_COMBAT_PERSPECTIVES,
     ZONE_FLAVOR, DUNGEON_FLAVOR,
     ITEM_QUALITY_COLORS, ITEM_QUALITY_NAMES,
@@ -463,12 +465,58 @@ def set_race_vocab_chance(chance_pct: int):
     _race_vocab_chance = chance_pct / 100.0
 
 
+def build_faction_directive(race: str) -> str:
+    """Always-on, non-negotiable faction-loyalty directive.
+
+    Ensures a bot never speaks favorably about the enemy faction or its
+    capitals, and treats its own faction's cities as home. Emitted on every
+    roleplay prompt path (general, group, proximity, events) because all of
+    them funnel through the race-context builders below.
+    """
+    faction = RACE_FACTION.get(race)
+    if not faction:
+        return ""
+    enemy = ENEMY_FACTION[faction]
+    own = FACTION_CAPITALS.get(faction, [])
+    foe = FACTION_CAPITALS.get(enemy, [])
+    return (
+        f"FACTION LOYALTY (non-negotiable, never break this): You are {race}, "
+        f"a sworn member of the {faction}. Your people's cities — "
+        f"{', '.join(own)} — are home, pride, and refuge; speak of them with "
+        f"belonging and warmth. The {enemy} are your enemies. Their cities — "
+        f"{', '.join(foe)} — are hostile enemy territory: NEVER praise, admire, "
+        f"romanticize, recommend, or express any wish to visit them, and never "
+        f"call them beautiful, welcoming, safe, or home. Speak of the {enemy} "
+        f"and their lands only with suspicion, contempt, defiance, or wartime "
+        f"hostility. ({', '.join(NEUTRAL_CITIES)} are neutral sanctuaries open "
+        f"to both factions and may be spoken of plainly.) You would sooner "
+        f"curse the {enemy} than compliment them."
+    )
+
+
+def build_lore_directive(race: str) -> str:
+    """Always-on lore-accuracy guardrail + curated canonical facts for the race,
+    so the model stops inventing lore (e.g. 'Queen Elune'). Emitted on every
+    roleplay prompt path via the race-context builders below."""
+    parts = [LORE_ACCURACY_RULE]
+    canon = RACE_CANON_LORE.get(race)
+    if canon:
+        parts.append(f"Canonical facts for your people: {canon}")
+    return " ".join(parts)
+
+
 def build_race_class_context(
     race: str, class_name: str,
     actual_role: str = None
 ) -> str:
     """Build an RP personality fragment for prompts."""
     parts = []
+    faction_directive = build_faction_directive(race)
+    if faction_directive:
+        parts.append(faction_directive)
+    lore_directive = build_lore_directive(race)
+    if lore_directive:
+        parts.append(lore_directive)
     profile = RACE_SPEECH_PROFILES.get(race)
     if profile:
         traits = profile['traits']
@@ -541,6 +589,14 @@ def build_race_class_context_parts(
     per_bot_parts = []
     shared_race_parts = []
     shared_class_parts = []
+
+    # Faction loyalty + lore accuracy: race-constant, emitted once per race.
+    faction_directive = build_faction_directive(race)
+    if faction_directive:
+        shared_race_parts.append(faction_directive)
+    lore_directive = build_lore_directive(race)
+    if lore_directive:
+        shared_race_parts.append(lore_directive)
 
     profile = RACE_SPEECH_PROFILES.get(race)
     if profile:

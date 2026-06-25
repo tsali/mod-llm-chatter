@@ -544,6 +544,20 @@ void DeliverPendingMessagesImpl()
                         processedMessage);
                 }
             }
+            else if (channel == "whisper")
+            {
+                // Private whisper back to the player
+                // who whispered the bot.
+                if (anchorPlayer
+                    && anchorPlayer->IsInWorld())
+                {
+                    bot->Whisper(
+                        processedMessage,
+                        LANG_UNIVERSAL,
+                        anchorPlayer);
+                    sent = true;
+                }
+            }
             else
             {
                 // Force-enroll the bot in the

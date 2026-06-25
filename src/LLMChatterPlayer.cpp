@@ -769,9 +769,82 @@ public:
               {PLAYERHOOK_ON_LOGIN,
                PLAYERHOOK_ON_UPDATE,
                PLAYERHOOK_CAN_PLAYER_USE_CHANNEL_CHAT,
+               PLAYERHOOK_CAN_PLAYER_USE_PRIVATE_CHAT,
                PLAYERHOOK_ON_UPDATE_ZONE,
                PLAYERHOOK_ON_UPDATE_AREA,
                PLAYERHOOK_ON_PVP_KILL}) {}
+
+    // Player whispers a bot -> queue an in-character AI whisper reply.
+    // Pairs with mod-playerbots AiPlayerbot.LLMChatterMode=1, which suppresses
+    // the default "Invite me to your group first" command response so the LLM
+    // can answer instead. Captures only player->bot whispers.
+    bool OnPlayerCanUseChat(
+        Player* player, uint32 type,
+        uint32 language, std::string& msg,
+        Player* receiver) override
+    {
+        if (!sLLMChatterConfig
+            || !sLLMChatterConfig->IsEnabled())
+            return true;
+        if (type != CHAT_MSG_WHISPER)
+            return true;
+        if (!player || IsPlayerBot(player))
+            return true;                 // ignore bot-originated whispers
+        if (!receiver || !IsPlayerBot(receiver))
+            return true;                 // only whispers directed AT a bot
+        if (language == LANG_ADDON)
+            return true;                 // hidden addon traffic, not speech
+        if (msg.empty())
+            return true;
+
+        uint32 botGuid =
+            receiver->GetGUID().GetCounter();
+        uint32 playerGuid =
+            player->GetGUID().GetCounter();
+        std::string botName = receiver->GetName();
+        std::string playerName = player->GetName();
+        uint32 zoneId = player->GetZoneId();
+        std::string zoneName = GetZoneName(zoneId);
+        if (zoneName.empty())
+            zoneName = "Unknown";
+
+        std::string json = "{";
+        json += "\"player_guid\":"
+            + std::to_string(playerGuid);
+        json += ",\"player_name\":\""
+            + JsonEscape(playerName) + "\"";
+        json += ",\"player_message\":\""
+            + JsonEscape(msg) + "\"";
+        json += ",\"zone_name\":\""
+            + JsonEscape(zoneName) + "\"";
+        json += ",\"bot_guid\":"
+            + std::to_string(botGuid);
+        json += ",\"bot_name\":\""
+            + JsonEscape(botName) + "\"";
+        json += ",\"bot_race\":"
+            + std::to_string(
+                (uint32)receiver->getRace());
+        json += ",\"bot_class\":"
+            + std::to_string(
+                (uint32)receiver->getClass());
+        json += ",\"bot_level\":"
+            + std::to_string(
+                (uint32)receiver->GetLevel());
+        json += "}";
+
+        QueueChatterEvent(
+            "whisper", "player", zoneId,
+            player->GetMapId(), 8,
+            "whisper:" + std::to_string(botGuid),
+            botGuid, botName,
+            playerGuid, playerName, 0,
+            EscapeString(json), 1,
+            sLLMChatterConfig
+                ->_eventExpirationSeconds,
+            false);
+
+        return true;
+    }
 
     void OnPlayerLogin(Player* player) override
     {

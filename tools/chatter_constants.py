@@ -204,6 +204,74 @@ RACE_NAMES = {
 }
 
 # =============================================================================
+# FACTION AWARENESS DATA
+# Drives in-character loyalty: bots speak of their own faction's capitals with
+# pride and treat the enemy faction's cities as hostile territory (never praised).
+# =============================================================================
+RACE_FACTION = {
+    "Human": "Alliance", "Dwarf": "Alliance", "Night Elf": "Alliance",
+    "Gnome": "Alliance", "Draenei": "Alliance",
+    "Orc": "Horde", "Undead": "Horde", "Tauren": "Horde",
+    "Troll": "Horde", "Blood Elf": "Horde",
+}
+
+ENEMY_FACTION = {"Alliance": "Horde", "Horde": "Alliance"}
+
+# WotLK capital cities per faction (own = home/pride, enemy's = hostile).
+FACTION_CAPITALS = {
+    "Alliance": ["Stormwind", "Ironforge", "Darnassus", "the Exodar"],
+    "Horde": ["Orgrimmar", "Silvermoon", "Thunder Bluff", "Undercity"],
+}
+
+# Sanctuary cities open to both factions in WotLK — not enemy territory.
+NEUTRAL_CITIES = ["Shattrath", "Dalaran"]
+
+# =============================================================================
+# LORE ACCURACY DATA
+# Curated, WotLK-accurate canonical facts to stop the model inventing lore
+# (e.g. "Queen Elune" — Elune is a goddess, never a queen). Injected into every
+# roleplay prompt alongside the faction directive.
+# =============================================================================
+LORE_ACCURACY_RULE = (
+    "LORE ACCURACY (strict): Use only authentic World of Warcraft "
+    "(Wrath of the Lich King era) lore. Never invent titles, names, deities, "
+    "places, or events. Elune is the night elves' GODDESS of the moon — never a "
+    "'queen' or 'king'. The Holy Light is a force, not a single god. Refer to "
+    "leaders, deities, and cities only by their real names and correct titles. "
+    "If you are unsure of a fact, stay vague rather than making something up."
+)
+
+# Per-race canonical facts (deity/faith, current leader, capital, key truth).
+# Deliberately compact — reinforces the most-often-hallucinated details.
+RACE_CANON_LORE = {
+    "Human": "Humans revere the Holy Light (a force, not a god). King Varian "
+             "Wrynn rules from Stormwind; Lordaeron fell to the Scourge.",
+    "Orc": "Orcs follow shamanism, the elements and ancestors. Warchief Thrall "
+           "leads the Horde from Orgrimmar in Durotar; Garrosh Hellscream is rising.",
+    "Dwarf": "Dwarves honor the Light and seek their Titan origins. King Magni "
+             "Bronzebeard rules from Ironforge.",
+    "Night Elf": "Elune is the GODDESS of the moon (not a queen). The kaldorei "
+                 "are led by High Priestess Tyrande Whisperwind and Archdruid "
+                 "Malfurion Stormrage; the demigod Cenarius guides the druids. "
+                 "Capital: Darnassus atop Teldrassil.",
+    "Undead": "The Forsaken are free-willed undead led by the Banshee Queen "
+              "Sylvanas Windrunner from the Undercity beneath ruined Lordaeron. "
+              "The Holy Light burns them.",
+    "Tauren": "Tauren revere the Earth Mother (An'she the sun, Mu'sha the moon). "
+              "High Chieftain Cairne Bloodhoof leads from Thunder Bluff in Mulgore.",
+    "Gnome": "Gnomes are master tinkers led by High Tinker Gelbin Mekkatorque; "
+             "they lost Gnomeregan to irradiated troggs and shelter in Ironforge.",
+    "Troll": "The Darkspear trolls follow the loa and voodoo, led by Vol'jin, "
+             "allied to the Horde under Thrall; they hail from the Echo Isles.",
+    "Blood Elf": "The sin'dorei crave and master the arcane after the Sunwell's "
+                 "fall. Regent Lord Lor'themar Theron rules Silvermoon City in "
+                 "Quel'Thalas (Prince Kael'thas betrayed them); they joined the Horde.",
+    "Draenei": "Draenei are uncorrupted eredar who revere the Light and the "
+               "Naaru, guided by the Prophet Velen; they crash-landed the Exodar "
+               "on Azuremyst Isle and joined the Alliance.",
+}
+
+# =============================================================================
 # ROLEPLAY PERSONALITY DATA
 # =============================================================================
 RACE_SPEECH_PROFILES = {

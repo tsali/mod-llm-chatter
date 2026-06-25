@@ -16,6 +16,8 @@ from chatter_shared import (
     get_class_name,
     get_gender_label,
     get_race_name,
+    build_race_class_context,
+    build_bot_identity_with_level,
     strip_conversation_actions,
 )
 from chatter_text import (
@@ -924,6 +926,84 @@ def handle_proximity_player_say(
         'completed' if ok else 'skipped',
     )
     return ok
+
+
+def handle_whisper(db, client, config, event):
+    """Player whispered a bot -> generate an in-character reply and deliver it
+    back as a private whisper (channel='whisper'). Self-contained: builds the
+    prompt from the bot's race/class (which carries the faction + lore-accuracy
+    directives) rather than the proximity participant machinery."""
+    event_id = int(event['id'])
+    extra = parse_extra_data(
+        event.get('extra_data'), event_id, 'whisper'
+    )
+    player_message = extra.get('player_message', '')
+    player_guid = int(extra.get('player_guid', 0) or 0)
+    bot_guid = int(extra.get('bot_guid', 0) or 0)
+    if not player_message or not bot_guid:
+        _mark_event(db, event_id, 'skipped')
+        return False
+
+    bot_name = extra.get('bot_name', 'Unknown')
+    race_name = get_race_name(extra.get('bot_race', 0))
+    class_name = get_class_name(extra.get('bot_class', 0))
+    bot_level = int(extra.get('bot_level', 0) or 0)
+    player_name = extra.get('player_name', 'a stranger')
+
+    identity = build_bot_identity_with_level(
+        bot_name, race_name, class_name, bot_level
+    )
+    rp_context = build_race_class_context(
+        race_name, class_name
+    )
+    prompt = (
+        f"{identity}\n{rp_context}\n\n"
+        f"A player named {player_name} has whispered to you "
+        f"privately: \"{player_message}\"\n"
+        "Reply in character, quietly and directly, as a private "
+        "whisper back to them. Keep it to 1-2 short sentences. "
+        "Stay lore-accurate. No markdown, no out-of-character or "
+        "AI talk."
+    )
+
+    response = call_llm(
+        client, prompt, config,
+        max_tokens_override=_get_proximity_int(
+            config, 'MaxTokensPerLine', 120
+        ),
+        label='whisper',
+        metadata={'speaker_name': bot_name},
+    )
+    if not response:
+        _mark_event(db, event_id, 'skipped')
+        return False
+
+    parsed = parse_single_response(response)
+    message = cleanup_message(
+        strip_speaker_prefix(
+            parsed.get('message', ''), bot_name
+        ),
+        action=parsed.get('action'),
+    )
+    if not message:
+        _mark_event(db, event_id, 'skipped')
+        return False
+    if len(message) > 255:
+        message = message[:252] + "..."
+
+    insert_chat_message(
+        db,
+        bot_guid=bot_guid,
+        bot_name=bot_name,
+        message=message,
+        channel='whisper',
+        event_id=event_id,
+        emote=parsed.get('emote'),
+        player_guid=player_guid or None,
+        owner_subsystem='whisper',
+    )
+    _mark_event(db, event_id, 'completed')
+    return True
 
 
 def handle_proximity_player_conversation(
