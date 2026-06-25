@@ -414,6 +414,35 @@ def build_dynamic_guidelines(
 # =============================================================================
 # PROMPT BUILDERS
 # =============================================================================
+
+# Classic "Barrens chat" — the most infamous General channel in WoW. Period-
+# accurate vanilla/WotLK flavor: Chuck Norris jokes and "anyone seen Mankrik's
+# wife?". Used for ambient General statements in The Barrens (zone 17).
+BARRENS_ZONE_ID = 17
+
+_BARRENS_CHAT_PROMPT = (
+    "You are a player chatting in the General channel of The Barrens — the most "
+    "infamous chat in all of World of Warcraft. Post ONE short, classic "
+    "'Barrens chat' line, period-accurate to vanilla / Wrath of the Lich King "
+    "(no modern references).\n"
+    "Pick ONE style and vary it: a Chuck Norris joke (WoW-flavored), asking if "
+    "anyone has seen Mankrik's wife, low-level LFG/dungeon spam (Wailing "
+    "Caverns, Razorfen Kraul), Horde pride/trash talk, or a silly argument. "
+    "Keep it to ONE casual line like real General/Trade spam — lowercase is "
+    "fine, no markdown, no narration, no quotation marks.\n"
+    "Riff on these (do NOT copy verbatim):\n"
+    "- Chuck Norris doesn't tame beasts, they tame themselves out of fear\n"
+    "- anyone seen mankrik's wife??\n"
+    "- chuck norris solo'd onyxia at level 1\n"
+    "- LFG Wailing Caverns need a healer\n"
+    "- still lookin for mankriks wife, been 2 hours now\n"
+    "- chuck norris vs mankrik's wife, who would win\n"
+    "- chuck norris doesn't need hit rating, he never misses\n"
+    "- 1g run through RFK anyone?\n"
+    "Write just the single chat line, nothing else."
+)
+
+
 def build_plain_statement_prompt(
     bot: dict,
     zone_id: int = 0,
@@ -431,6 +460,19 @@ def build_plain_statement_prompt(
     mode = get_chatter_mode(config) if config else 'normal'
     is_rp = (mode == 'roleplay')
     parts = []
+
+    # The Barrens: dominate General chat with classic Chuck Norris / Mankrik's
+    # wife spam. High chance so the zone feels authentically like Barrens chat.
+    if zone_id == BARRENS_ZONE_ID and config is not None and \
+            str(config.get('LLMChatter.BarrensChat.Enable', '1')).strip() == '1':
+        try:
+            chance = int(config.get('LLMChatter.BarrensChat.Chance', 65))
+        except (TypeError, ValueError):
+            chance = 65
+        if random.random() * 100 < chance:
+            return append_json_instruction(
+                _BARRENS_CHAT_PROMPT, allow_action, skip_emote=True
+            )
 
     if is_rp:
         identity = build_bot_identity(
