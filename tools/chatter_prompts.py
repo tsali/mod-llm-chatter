@@ -442,6 +442,43 @@ _BARRENS_CHAT_PROMPT = (
     "Write just the single chat line, nothing else."
 )
 
+# City Trade chat — capital cities bustle with WTS/WTB/LFW advertising. Backed by
+# a real, ah-bot-stocked auction house, so "check the AH" lines actually pay off.
+CITY_TRADE_ZONE_IDS = {
+    1519,  # Stormwind
+    1537,  # Ironforge
+    1657,  # Darnassus
+    3557,  # The Exodar
+    1637,  # Orgrimmar
+    1638,  # Thunder Bluff
+    1497,  # Undercity
+    3487,  # Silvermoon City
+    4395,  # Dalaran
+}
+
+_TRADE_CHAT_PROMPT = (
+    "You are a player in a capital city, posting in the Trade channel. Write ONE "
+    "short, realistic WoW (Wrath of the Lich King era) trade/advertising line — "
+    "the kind that scrolls endlessly in a city Trade channel. No modern "
+    "references.\n"
+    "Pick ONE style and vary it: WTS (selling) an item or service, WTB (buying) "
+    "an item or mats, advertising a profession/enchant/gem service, looking for "
+    "group/raid, or pointing people to the auction house. Use real WotLK items "
+    "(Frostweave Bag, Saronite Ore, Titansteel Bar, Eternal Fire, glyphs, "
+    "enchants, gems, etc.). Keep it to ONE casual line — lowercase is fine, no "
+    "markdown, no narration, no quotation marks.\n"
+    "Riff on these (do NOT copy verbatim):\n"
+    "- WTS [Frostweave Bag] 45g, /w me\n"
+    "- WTB Titansteel Bars x5, paying over AH price\n"
+    "- selling enchants! have mats, tips appreciated\n"
+    "- LF healer for HToC heroic, summons up\n"
+    "- WTB Saronite Ore in bulk for my smithing\n"
+    "- cheap glyphs on the AH, go grab em\n"
+    "- WTS [Eternal Fire] x10, check my auctions\n"
+    "- 80 prot warr LF raiding guild\n"
+    "Write just the single chat line, nothing else."
+)
+
 
 def build_plain_statement_prompt(
     bot: dict,
@@ -472,6 +509,18 @@ def build_plain_statement_prompt(
         if random.random() * 100 < chance:
             return append_json_instruction(
                 _BARRENS_CHAT_PROMPT, allow_action, skip_emote=True
+            )
+
+    # Capital cities: Trade-channel WTS/WTB/LFG advertising (AH is stocked).
+    if zone_id in CITY_TRADE_ZONE_IDS and config is not None and \
+            str(config.get('LLMChatter.TradeChat.Enable', '1')).strip() == '1':
+        try:
+            trade_chance = int(config.get('LLMChatter.TradeChat.Chance', 45))
+        except (TypeError, ValueError):
+            trade_chance = 45
+        if random.random() * 100 < trade_chance:
+            return append_json_instruction(
+                _TRADE_CHAT_PROMPT, allow_action, skip_emote=True
             )
 
     if is_rp:
