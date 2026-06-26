@@ -11,6 +11,7 @@
 
 #include "Battleground.h"
 #include "BattlegroundAB.h"
+#include "Config.h"
 #include "BattlegroundEY.h"
 #include "BattlegroundWS.h"
 #include "Channel.h"
@@ -796,6 +797,15 @@ public:
             return true;                 // hidden addon traffic, not speech
         if (msg.empty())
             return true;
+        // Command whispers (prefixed with the playerbots CommandPrefix, e.g.
+        // "bot follow") are handled by mod-playerbots, not the LLM — skip them
+        // so they don't get an AI reply too.
+        {
+            std::string cmdPrefix = sConfigMgr->GetOption<std::string>(
+                "AiPlayerbot.CommandPrefix", "bot") + " ";
+            if (msg.rfind(cmdPrefix, 0) == 0)
+                return true;
+        }
 
         uint32 botGuid =
             receiver->GetGUID().GetCounter();
