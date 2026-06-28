@@ -1314,7 +1314,8 @@ void HandleProximityPlayerSay(
         return;
 
     if (!player || IsPlayerBot(player)
-        || type != CHAT_MSG_SAY)
+        || (type != CHAT_MSG_SAY
+            && type != CHAT_MSG_YELL))  // nearby bots overhear /yell too
         return;
 
     // Ignore hidden addon traffic (DBM, Questie, ElvUI, ...);
