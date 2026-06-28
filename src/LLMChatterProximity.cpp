@@ -883,8 +883,8 @@ bool QueueNamedPlayerSayProximityEvent(
         return false;
 
     Map* map = player->GetMap();
-    if (!map || map->IsRaid() || map->IsDungeon()
-        || map->IsBattleground())
+    if (!map || ((map->IsRaid() || map->IsDungeon()
+        || map->IsBattleground()) && map->GetId() != 564))
         return false;
 
     float radius = static_cast<float>(
@@ -937,8 +937,8 @@ void HandleProximityPlayerSayNewScene(
         return;
 
     Map* map = player->GetMap();
-    if (!map || map->IsRaid() || map->IsDungeon()
-        || map->IsBattleground())
+    if (!map || ((map->IsRaid() || map->IsDungeon()
+        || map->IsBattleground()) && map->GetId() != 564))
         return;
 
     float radius = static_cast<float>(
@@ -1110,8 +1110,8 @@ void MaybeQueueProximityScene(Player* player)
         return;
 
     Map* map = player->GetMap();
-    if (!map || map->IsRaid() || map->IsDungeon()
-        || map->IsBattleground())
+    if (!map || ((map->IsRaid() || map->IsDungeon()
+        || map->IsBattleground()) && map->GetId() != 564))
         return;
 
     uint32 effectiveChance =
